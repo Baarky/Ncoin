@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>フリーザ銀行</title>
+</head>
+<body>
+  <h1>フリーザ銀行 Webアプリ</h1>
+
+  <h2>ユーザ一覧</h2>
+  <button onclick="loadUsers()">更新</button>
+  <ul id="userList"></ul>
+
+  <h2>送金</h2>
+  <form id="sendForm">
+    <input type="text" id="sender" placeholder="送金元ID" required>
+    <input type="text" id="receiver" placeholder="送金先ID" required>
+    <input type="number" id="amount" placeholder="金額" required>
+    <button type="submit">送金</button>
+  </form>
+  <p id="result"></p>
+
+  <script>
+    async function loadUsers() {
+      const res = await fetch("/users");
+      const users = await res.json();
+      const list = document.getElementById("userList");
+      list.innerHTML = "";
+      users.forEach(u => {
+        const li = document.createElement("li");
+        li.textContent = `${u.id}: ${u.username} - ${u.balance} コイン`;
+        list.appendChild(li);
+      });
+    }
+
+    document.getElementById("sendForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const sender = document.getElementById("sender").value;
+      const receiver = document.getElementById("receiver").value;
+      const amount = parseInt(document.getElementById("amount").value);
+
+      const res = await fetch("/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sender_id: sender, receiver_id: receiver, amount })
+      });
+
+      const data = await res.json();
+      document.getElementById("result").textContent = data.message || data.error;
+      loadUsers();
+    });
+
+    loadUsers();
+  </script>
+</body>
+</html>
