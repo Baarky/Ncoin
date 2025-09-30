@@ -2,38 +2,33 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>ユーザ名登録</title>
+  <title>ユーザ名を登録</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    input { padding: 8px; margin: 8px; }
-    button { padding: 8px 16px; }
-  </style>
 </head>
 <body>
-  <h1>ようこそ！</h1>
-  <p>FriezaCoinを使うためにユーザ名を設定してください。</p>
-  
-  <input type="text" id="usernameInput" placeholder="ユーザ名を入力">
-  <button id="setUsernameBtn">登録</button>
+  <h1>ユーザ名を設定してください</h1>
+  <input type="text" id="usernameInput" placeholder="ユーザ名">
+  <button id="btn">登録</button>
 
   <script>
-    document.getElementById("setUsernameBtn").addEventListener("click", async () => {
+    document.getElementById("btn").addEventListener("click", async () => {
       const username = document.getElementById("usernameInput").value.trim();
-      if(!username) return alert("ユーザ名を入力してください");
+      if (!username) {
+        alert("ユーザ名を入力してください");
+        return;
+      }
 
       const res = await fetch("/set_username", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username })
       });
-
       const data = await res.json();
-      if(data.success){
-        alert("ユーザ名を登録しました！");
-        window.location.href = "/dashboard";
+      if (data.success) {
+        alert("登録されました");
+        window.location.href = "/";  // または /dashboard
       } else {
-        alert("エラー: " + data.error);
+        alert("エラー: " + (data.error || "登録失敗"));
       }
     });
   </script>
