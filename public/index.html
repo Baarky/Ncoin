@@ -2,57 +2,129 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <title>FriezaCoinダッシュボード</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>フリーザ銀行</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    table { border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #333; padding: 8px 12px; }
+    input { padding: 5px; margin: 5px; }
+  </style>
 </head>
 <body>
-  <h1>フリーザ銀行 Webアプリ</h1>
 
-  <h2>ユーザ一覧</h2>
-  <button onclick="loadUsers()">更新</button>
-  <ul id="userList"></ul>
+<h1>FriezaCoin ダッシュボード</h1>
 
-  <h2>送金</h2>
-  <form id="sendForm">
-    <input type="text" id="sender" placeholder="送金元ID" required>
-    <input type="text" id="receiver" placeholder="送金先ID" required>
-    <input type="number" id="amount" placeholder="金額" required>
-    <button type="submit">送金</button>
-  </form>
-  <p id="result"></p>
+<button id="loginBtn">Googleでログイン</button>
 
-  <script>
-    async function loadUsers() {
-      const res = await fetch("/users");
-      const users = await res.json();
-      const list = document.getElementById("userList");
-      list.innerHTML = "";
-      users.forEach(u => {
-        const li = document.createElement("li");
-        li.textContent = `${u.id}: ${u.username} - ${u.balance} コイン`;
-        list.appendChild(li);
-      });
+<div id="setUsernameDiv" style="display:none;">
+  <h2>ユーザ名を設定してください</h2>
+  <input type="text" id="usernameInput" placeholder="ユーザ名を入力">
+  <button id="setUsernameBtn">設定</button>
+</div>
+
+<h2>ユーザ一覧</h2>
+<table id="userTable">
+  <thead>
+    <tr><th>ID</th><th>ユーザ名</th><th>残高</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<h2>送金フォーム</h2>
+<form id="sendForm">
+  <label>送信者（自分）: <input type="text" id="sender_name" readonly></label><br>
+  <label>送金先ID: <input type="number" id="receiver_id" required></label><br>
+  <label>送金額: <input type="number" id="amount" required></label><br>
+  <button type="submit">送金する</button>
+</form>
+
+<script>
+const loginBtn = document.getElementById("loginBtn");
+const setUsernameDiv = document.getElementById("setUsernameDiv");
+const setUsernameBtn = document.getElementById("setUsernameBtn");
+let currentUserEmail = "";
+let currentUserName = "";
+
+// Googleログイン
+loginBtn.addEventListener("click", () => {
+  window.location.href = "/auth/google";
+});
+
+// ログインユーザ情報取得
+async function loadCurrentUser() {
+  try {
+    const res = await fetch("/current_user");
+    if (!res.ok) return;
+    const data = await res.json();
+    currentUserEmail = data.email;
+    if(data.username) {
+      currentUserName = data.username;
+      document.getElementById("sender_name").value = currentUserName;
+    } else {
+      // ユーザ名未設定
+      setUsernameDiv.style.display = "block";
     }
+  } catch(e) { console.error(e); }
+}
 
-    document.getElementById("sendForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      const sender = document.getElementById("sender").value;
-      const receiver = document.getElementById("receiver").value;
-      const amount = parseInt(document.getElementById("amount").value);
+// ユーザ名をサーバーに送信
+setUsernameBtn.addEventListener("click", async () => {
+  const username = document.getElementById("usernameInput").value.trim();
+  if(!username) return alert("ユーザ名を入力してください");
 
-      const res = await fetch("/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sender_id: sender, receiver_id: receiver, amount })
-      });
-
-      const data = await res.json();
-      document.getElementById("result").textContent = data.message || data.error;
-      loadUsers();
-    });
-
+  const res = await fetch("/set_username", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username })
+  });
+  const data = await res.json();
+  if(data.success) {
+    currentUserName = username;
+    document.getElementById("sender_name").value = username;
+    setUsernameDiv.style.display = "none";
     loadUsers();
-  </script>
+  } else {
+    alert(data.error);
+  }
+});
+
+// ユーザ一覧取得
+async function loadUsers() {
+  try {
+    const res = await fetch("/users");
+    if (!res.ok) throw new Error("ログインしてください");
+    const users = await res.json();
+    const tbody = document.querySelector("#userTable tbody");
+    tbody.innerHTML = "";
+    users.forEach(u => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${u.id}</td><td>${u.username}</td><td>${u.balance}</td>`;
+      tbody.appendChild(tr);
+    });
+  } catch(e) { console.error(e); }
+}
+
+// 送金フォーム
+document.getElementById("sendForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const receiver_id = document.getElementById("receiver_id").value;
+  const amount = document.getElementById("amount").value;
+
+  const res = await fetch("/send", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ receiver_id, amount })
+  });
+  const data = await res.json();
+  alert(data.message || data.error);
+  loadUsers();
+});
+
+// 初期表示
+loadCurrentUser();
+loadUsers();
+</script>
+
 </body>
 </html>
