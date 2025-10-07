@@ -12,12 +12,13 @@ const app = express();
 app.use(express.json());
 
 // --- セッション設定 ---
+app.set('trust proxy', 1); // もしリバースプロキシの背後にある場合
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "defaultsecret",
     resave: false,
     saveUninitialized: false,
-    cookie: { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 }
+    cookie: { httpOnly: true, secure: true,  sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 },
   })
 );
 
@@ -85,13 +86,12 @@ app.get("/api/qrcode", async (req, res) => {
 const rateLimit = require('express-rate-limit');
 
 const sendLimiter = rateLimit({
-  windowMs: 60*1000, // 1分
-  max: 10,
+  windowMs: 60*1000, // 1分間
+  max: 10,           // 最大10回
   message: "送金リクエストが多すぎます。1分後に再度お試しください。"
 });
 
-// POST /send に制限を適用
-app.post("/send", sendLimiter, async (req, res) => {
+app.post("/send", async (req, res) => {
   const { toEmail, amount } = req.body;
   const numAmount = Number(amount);
 
@@ -150,12 +150,8 @@ app.get("/admin", (req, res) => {
 app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 app.get("/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
-  (req, res) => {
-    console.log("User after Google login:", req.user);
-    res.redirect("/dashboard");
-  }
+  (req, res) => res.redirect("/dashboard")
 );
-
 
 // --- ログアウト ---
 app.get("/logout", (req, res, next) => {
