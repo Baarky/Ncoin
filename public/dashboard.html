@@ -14,8 +14,8 @@
   <p>残高: <span id="balance"></span> ポイント</p>
 
   <h2>送金フォーム</h2>
-  <input type="email" id="toEmail" placeholder="相手のメール">
-  <input type="number" id="amount" placeholder="送金額">
+  <input type="email" id="toEmail" placeholder="相手のメール" class="form">
+  <input type="number" id="amount" placeholder="送金額" class="form">
   <button onclick="send()">送金</button>
 
   <pre id="output"></pre>
@@ -94,9 +94,9 @@ body {
 }
 
 img#myQR {
-  width: 80vw;   /* 画面幅の80% */
-  max-width: 300px; /* 最大幅を300pxに制限 */
-  height: auto;  /* 縦横比を保持 */
+  width: 80vw;        /* 画面幅の80% */
+  max-width: 300px;   /* 最大幅を300pxに制限 */
+  height: auto;       /* 縦横比を保持 */
 }
 
 button {
@@ -106,4 +106,17 @@ button {
   width: 80vw;
   max-width: 300px;
 }
+
+/* ここを追加 */
+input.form {
+  width: 80vw;        /* 画面幅の80% */
+  max-width: 300px;   /* 最大幅 */
+  padding: 15px;      /* 内側の余白 */
+  font-size: 18px;    /* 文字サイズを大きく */
+  margin: 10px 0;     /* 上下に余白 */
+  border-radius: 8px; /* 角丸 */
+  border: 1px solid #ccc; /* 枠線 */
+  box-sizing: border-box;  /* パディング込みで幅を計算 */
+}
 </style>
+
