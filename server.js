@@ -32,6 +32,20 @@ passport.deserializeUser(async (id, done) => {
   done(null, user);
 });
 
+const LocalStrategy = require('passport-local').Strategy;
+const bcrypt = require('bcrypt');
+
+passport.use(new LocalStrategy(
+  { usernameField: 'email' }, // email or username
+  async (email, password, done) => {
+    const user = await User.findOne({ where: { email } });
+    if (!user) return done(null, false, { message: "ユーザーが存在しません" });
+    const match = await bcrypt.compare(password, user.passwordHash);
+    if (!match) return done(null, false, { message: "パスワードが違います" });
+    return done(null, user);
+  }
+));
+
 passport.use(
   new GoogleStrategy(
     {
@@ -158,6 +172,32 @@ app.get("/logout", (req, res, next) => {
   req.logout(err => {
     if (err) return next(err);
     res.redirect("/");
+  });
+});
+// ローカル（メール+パスワード）ログイン
+app.post('/auth/local', passport.authenticate('local', {
+  successRedirect: '/dashboard',
+  failureRedirect: '/'
+}));
+
+// 電話番号コード送信
+app.post('/auth/phone', async (req, res) => {
+  const { phone } = req.body;
+  const code = Math.floor(100000 + Math.random()*900000); // 6桁
+  // DBに保存
+  await User.update({ smsCode: code }, { where: { phone } });
+  // SMS送信 (Twilioなど)
+  res.send("コード送信しました");
+});
+
+// 電話番号コード認証
+app.post('/auth/phone/verify', async (req, res) => {
+  const { phone, code } = req.body;
+  const user = await User.findOne({ where: { phone, smsCode: code } });
+  if (!user) return res.status(400).send("コードが違います");
+  req.login(user, err => {
+    if (err) return res.status(500).send(err);
+    res.redirect('/dashboard');
   });
 });
 
