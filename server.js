@@ -17,7 +17,7 @@ app.use(
     secret: process.env.SESSION_SECRET || "defaultsecret",
     resave: false,
     saveUninitialized: false,
-    cookie: { httpOnly: true, secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 },
+    cookie: { httpOnly: true, secure: true,  sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 },
   })
 );
 
@@ -146,6 +146,16 @@ app.get("/logout", (req, res, next) => {
   });
 });
 
+const rateLimit = require('express-rate-limit');
+app.use('/send', rateLimit({ windowMs: 60*1000, max: 10 }));
+
+
+await sequelize.transaction(async (t) => {
+  user.Wallet.balance -= numAmount;
+  toUser.Wallet.balance += numAmount;
+  await user.Wallet.save({ transaction: t });
+  await toUser.Wallet.save({ transaction: t });
+});
 // --- サーバ起動 ---
 (async () => {
   await sequelize.sync();
