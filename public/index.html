@@ -1,12 +1,28 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta charset="utf-8">
-  <title>Ncoin（テスト版）</title>
+  <meta charset="UTF-8">
+  <title>ログインページ</title>
 </head>
 <body>
-  <h1>Ncoin（テスト版）</h1>
-  <a href="/auth/google">Googleでログイン</a>
+  <h1>ログイン</h1>
+
+  <!-- Googleログイン -->
+  <a href="/auth/google">
+    <button>Googleでログイン</button>
+  </a>
+
+  <!-- 電話番号ログイン -->
+  <form action="/auth/phone" method="POST">
+    <input type="tel" name="phone" placeholder="電話番号" required>
+    <button type="submit">電話番号でログイン</button>
+  </form>
+
+  <!-- メール・パスワードログイン -->
+  <form action="/auth/local" method="POST">
+    <input type="text" name="username" placeholder="ユーザ名" required>
+    <input type="password" name="password" placeholder="パスワード" required>
+    <button type="submit">メールでログイン</button>
+  </form>
 </body>
 </html>

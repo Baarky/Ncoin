@@ -1,5 +1,15 @@
-<form action="/auth/local" method="POST">
-  <input type="text" name="email" placeholder="メールアドレス">
-  <input type="password" name="password" placeholder="パスワード">
-  <button type="submit">ログイン</button>
-</form>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>ユーザ名設定</title>
+</head>
+<body>
+  <h1>ユーザ名を入力してください</h1>
+  <form action="/set-username" method="POST">
+    <input type="text" name="username" placeholder="ユーザ名" required>
+    <button type="submit">保存してダッシュボードへ</button>
+  </form>
+</body>
+</html>

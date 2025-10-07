@@ -200,6 +200,32 @@ app.post('/auth/phone/verify', async (req, res) => {
     res.redirect('/dashboard');
   });
 });
+// Google認証コールバック
+app.get("/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/" }),
+  async (req, res) => {
+    if (!req.user.name || req.user.name.trim() === "") {
+      // ユーザ名未設定なら入力ページへ
+      return res.redirect("/set-username");
+    }
+    res.redirect("/dashboard");
+  }
+);
+
+// ユーザ名入力ページ
+app.get("/set-username", (req, res) => {
+  if (!req.user) return res.redirect("/");
+  res.sendFile(__dirname + "/public/set-username.html");
+});
+
+// ユーザ名保存
+app.post("/set-username", async (req, res) => {
+  if (!req.user) return res.redirect("/");
+  const { username } = req.body;
+  req.user.name = username;
+  await req.user.save();
+  res.redirect("/dashboard");
+});
 
 
 
