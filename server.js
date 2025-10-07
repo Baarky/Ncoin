@@ -81,8 +81,14 @@ app.get("/api/qrcode", async (req, res) => {
   const qrDataUrl = await QRCode.toDataURL(url);
   res.json({ qr: qrDataUrl });
 });
+const rateLimit = require('express-rate-limit');
 
-// --- 送金 ---
+const sendLimiter = rateLimit({
+  windowMs: 60*1000, // 1分間
+  max: 10,           // 最大10回
+  message: "送金リクエストが多すぎます。1分後に再度お試しください。"
+});
+
 app.post("/send", async (req, res) => {
   const { toEmail, amount } = req.body;
   const numAmount = Number(amount);
@@ -93,20 +99,27 @@ app.post("/send", async (req, res) => {
   const fromUser = await User.findByPk(req.user.id, { include: Wallet });
   const toUser = await User.findOne({ where: { email: toEmail }, include: Wallet });
   if (!toUser) return res.status(404).json({ error: "送金先が見つかりません。" });
-
   if (fromUser.Wallet.balance < numAmount) return res.status(400).json({ error: "残高が不足しています。" });
 
-  fromUser.Wallet.balance -= numAmount;
-  toUser.Wallet.balance += numAmount;
-  await fromUser.Wallet.save();
-  await toUser.Wallet.save();
+  try {
+    await sequelize.transaction(async (t) => {
+      fromUser.Wallet.balance -= numAmount;
+      toUser.Wallet.balance += numAmount;
+      await fromUser.Wallet.save({ transaction: t });
+      await toUser.Wallet.save({ transaction: t });
+    });
 
-  res.json({
-    from: fromUser.Wallet.balance,
-    to: toUser.Wallet.balance,
-    message: `送金完了：${toEmail} に ${numAmount} ポイント送金しました。`
-  });
+    res.json({
+      from: fromUser.Wallet.balance,
+      to: toUser.Wallet.balance,
+      message: `送金完了：${toEmail} に ${numAmount} ポイント送金しました。`
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "送金中にエラーが発生しました。" });
+  }
 });
+
 
 // --- ログイン情報取得 ---
 app.get("/api/me", (req, res) => {
@@ -146,16 +159,8 @@ app.get("/logout", (req, res, next) => {
   });
 });
 
-const rateLimit = require('express-rate-limit');
-app.use('/send', rateLimit({ windowMs: 60*1000, max: 10 }));
 
 
-await sequelize.transaction(async (t) => {
-  user.Wallet.balance -= numAmount;
-  toUser.Wallet.balance += numAmount;
-  await user.Wallet.save({ transaction: t });
-  await toUser.Wallet.save({ transaction: t });
-});
 // --- サーバ起動 ---
 (async () => {
   await sequelize.sync();
