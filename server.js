@@ -162,6 +162,26 @@ app.get("/logout", (req, res, next) => {
   });
 });
 
+require('dotenv').config();
+
+const session = require('express-session');
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'defaultsecret',
+  resave: false,
+  saveUninitialized: true
+}));
+
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: "/auth/google/callback"
+  },
+  function(accessToken, refreshToken, profile, done) {
+    // ユーザー処理
+  }
+));
+
 // --- サーバ起動 ---
 (async () => {
   await sequelize.sync();
