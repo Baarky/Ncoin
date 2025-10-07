@@ -1,0 +1,10 @@
+Ncoin/
+node_modules/
+database.sqlite
+sessions.sqlite
+.env
+Ncoin/
+node_modules/
+sessions.sqlite
+database.sqlite
+.env

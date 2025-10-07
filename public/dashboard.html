@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <title>ダッシュボード</title>
+</head>
+<body>
+  <h2>自分の送金用QR</h2>
+  <img id="myQR" alt="QRコードを生成中…">
+  <button id="adminBtn" style="display:none;" onclick="location.href='/admin'">管理者ページ</button>
+
+  <h1>ようこそ <span id="username"></span></h1>
+  <p>残高: <span id="balance"></span> ポイント</p>
+
+  <h2>送金フォーム</h2>
+  <input type="email" id="toEmail" placeholder="相手のメール">
+  <input type="number" id="amount" placeholder="送金額">
+  <button onclick="send()">送金</button>
+
+  <pre id="output"></pre>
+
+<script>
+async function loadUser() {
+  const res = await fetch('/api/me');
+  const data = await res.json();
+
+  document.getElementById('username').innerText = data.name;
+  document.getElementById('balance').innerText = data.balance;
+
+  // 管理者判定
+  if (data.isAdmin) {
+    document.getElementById('adminBtn').style.display = 'block';
+  }
+
+  // QR生成
+  const qrRes = await fetch('/api/qrcode');
+  const qrData = await qrRes.json();
+  document.getElementById('myQR').src = qrData.qr;
+}
+
+// ページロード時に呼ぶ
+loadUser();
+
+async function send() {
+  const toEmail = document.getElementById('toEmail').value;
+  const amount = document.getElementById('amount').value;
+
+  const res = await fetch('/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ toEmail, amount })
+  });
+
+  const data = await res.json();
+  document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+
+  if (data.from !== undefined) {
+    document.getElementById('balance').innerText = data.from;
+  }
+}
+async function loadUser() {
+  const res = await fetch('/api/me');
+  const data = await res.json();
+
+  document.getElementById('username').innerText = data.name;
+  document.getElementById('balance').innerText = data.balance;
+
+  // 管理者判定
+  if (data.isAdmin) {
+    document.getElementById('adminBtn').style.display = 'block';
+  }
+}
+async function loadQR() {
+  const res = await fetch('/api/qrcode');
+  const data = await res.json();
+  document.getElementById('myQR').src = data.qr;
+}
+
+loadQR();
+</script>
+
+</body>
+</html>
+<style>
+body {
+  font-family: sans-serif;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+img#myQR {
+  width: 80vw;   /* 画面幅の80% */
+  max-width: 300px; /* 最大幅を300pxに制限 */
+  height: auto;  /* 縦横比を保持 */
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  margin-top: 10px;
+  width: 80vw;
+  max-width: 300px;
+}
+</style>
