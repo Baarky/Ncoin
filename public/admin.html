@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理者ポイント付与</title>
+  <style>
+  body { font-family: sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; } input, button { width: 80vw; max-width: 300px; padding: 12px; font-size: 18px; margin-top: 10px; display: block; } button { cursor: pointer; } pre { width: 90vw; max-width: 350px; margin-top: 20px; word-break: break-word; }
+  </style>
+</head>
+
+<body>
+  <h1>管理者ポイント付与</h1>
+  <input type="email" id="toEmail" placeholder="ユーザーのメール">
+  <input type="number" id="amount" placeholder="付与ポイント">
+  <button onclick="addPoints()">ポイント付与</button> <pre id="output"></pre> 
+  <script>
+  async function addPoints() { const toEmail = document.getElementById('toEmail').value; const amount = document.getElementById('amount').value; const res = await fetch('/admin/addpoints', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ toEmail, amount }) }); const data = await res.json(); document.getElementById('output').innerText = JSON.stringify(data, null, 2); }
+  </script>
+</body>
+
+</html>
