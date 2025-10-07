@@ -1,42 +1,28 @@
 require("dotenv").config();
 const express = require("express");
-const bodyParser = require("body-parser");
 const session = require("express-session");
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const cookieParser = require("cookie-parser");
-const csrf = require("csurf");
 const QRCode = require("qrcode");
-const SQLiteStore = require("connect-sqlite3")(session);
 const { sequelize, User, Wallet } = require("./models");
 
 const app = express();
 
 // --- ミドルウェア ---
-app.use(bodyParser.json());
-app.use(cookieParser());
+app.use(express.json());
+
+// --- セッション設定 ---
 app.use(
   session({
-    store: new SQLiteStore({ db: "sessions.sqlite" }),
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET || "defaultsecret",
     resave: false,
     saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false, // 本番では true
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    },
+    cookie: { httpOnly: true, secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 },
   })
 );
+
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(csrf({ cookie: true }));
-
-// --- CSRFトークン発行 ---
-app.get("/api/csrf-token", (req, res) => {
-  res.json({ csrfToken: req.csrfToken() });
-});
 
 // --- Passport 設定 ---
 passport.serializeUser((user, done) => done(null, user.id));
@@ -91,7 +77,7 @@ app.post("/admin/addpoints", async (req, res) => {
 // --- QRコード生成 ---
 app.get("/api/qrcode", async (req, res) => {
   if (!req.user) return res.status(401).json({ error: "ログインしてください" });
-  const url = `https://YOUR-NGROK-URL.ngrok-free.app/sendpage?toEmail=${encodeURIComponent(req.user.email)}`;
+  const url = `https://${process.env.RENDER_EXTERNAL_URL}/sendpage?toEmail=${encodeURIComponent(req.user.email)}`;
   const qrDataUrl = await QRCode.toDataURL(url);
   res.json({ qr: qrDataUrl });
 });
@@ -110,7 +96,6 @@ app.post("/send", async (req, res) => {
 
   if (fromUser.Wallet.balance < numAmount) return res.status(400).json({ error: "残高が不足しています。" });
 
-  // 送金処理
   fromUser.Wallet.balance -= numAmount;
   toUser.Wallet.balance += numAmount;
   await fromUser.Wallet.save();
@@ -135,13 +120,12 @@ app.get("/api/me", (req, res) => {
   });
 });
 
-// --- ダッシュボード & 管理者ページ ---
+// --- ページ ---
 app.get("/", (req, res) => res.sendFile(__dirname + "/public/index.html"));
 app.get("/dashboard", (req, res) => {
   if (!req.user) return res.redirect("/");
   res.sendFile(__dirname + "/public/dashboard.html");
 });
-
 app.get("/admin", (req, res) => {
   if (!req.user || !isAdmin(req.user)) return res.status(403).send("管理者専用ページです");
   res.sendFile(__dirname + "/public/admin.html");
@@ -162,28 +146,9 @@ app.get("/logout", (req, res, next) => {
   });
 });
 
-require('dotenv').config();
-
-const session = require('express-session');
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'defaultsecret',
-  resave: false,
-  saveUninitialized: true
-}));
-
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "/auth/google/callback"
-  },
-  function(accessToken, refreshToken, profile, done) {
-    // ユーザー処理
-  }
-));
-
 // --- サーバ起動 ---
 (async () => {
   await sequelize.sync();
-  app.listen(process.env.PORT || 4000, () => console.log(`✅ Server running on port ${process.env.PORT || 4000}`));
+  const port = process.env.PORT || 4000;
+  app.listen(port, () => console.log(`✅ Server running on port ${port}`));
 })();
