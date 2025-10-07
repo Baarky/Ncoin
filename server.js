@@ -85,12 +85,13 @@ app.get("/api/qrcode", async (req, res) => {
 const rateLimit = require('express-rate-limit');
 
 const sendLimiter = rateLimit({
-  windowMs: 60*1000, // 1分間
-  max: 10,           // 最大10回
+  windowMs: 60*1000, // 1分
+  max: 10,
   message: "送金リクエストが多すぎます。1分後に再度お試しください。"
 });
 
-app.post("/send", async (req, res) => {
+// POST /send に制限を適用
+app.post("/send", sendLimiter, async (req, res) => {
   const { toEmail, amount } = req.body;
   const numAmount = Number(amount);
 
