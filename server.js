@@ -17,7 +17,7 @@ app.use(
     secret: process.env.SESSION_SECRET || "defaultsecret",
     resave: false,
     saveUninitialized: false,
-    cookie: { httpOnly: true, secure: true,  sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 },
+    cookie: { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 }
   })
 );
 
@@ -150,8 +150,12 @@ app.get("/admin", (req, res) => {
 app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 app.get("/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
-  (req, res) => res.redirect("/dashboard")
+  (req, res) => {
+    console.log("User after Google login:", req.user);
+    res.redirect("/dashboard");
+  }
 );
+
 
 // --- ログアウト ---
 app.get("/logout", (req, res, next) => {
