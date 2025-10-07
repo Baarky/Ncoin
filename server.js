@@ -56,7 +56,8 @@ passport.use(
 
 // --- 管理者判定 ---
 function isAdmin(user) {
-  return user && user.email === process.env.ADMIN_EMAIL;
+  console.log("Admin check:", user.email, process.env.ADMIN_EMAIL);
+  return user && user.email.trim().toLowerCase() === process.env.ADMIN_EMAIL.trim().toLowerCase();
 }
 
 // --- 管理者ポイント付与 ---
