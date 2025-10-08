@@ -215,24 +215,6 @@ app.post('/auth/phone/verify', async (req, res) => {
     res.redirect('/dashboard');
   });
 });
-// Google認証コールバック
-app.get('/auth/google/callback', passport.authenticate('google', {
-    failureRedirect: '/login'
-}), async (req, res) => {
-    const db = require('./db'); // sqlite3インスタンス
-    const userId = req.user.id; // ログインユーザのID（認証情報から取得）
-
-    // DBからユーザ名を確認
-    db.get('SELECT username FROM users WHERE id = ?', [userId], (err, row) => {
-        if (err) return res.status(500).send('DB error');
-        if (!row || !row.username) {
-            // ユーザ名が未設定ならlogin.htmlへリダイレクト
-            return res.redirect('/login.html');
-        }
-        // ユーザ名が設定済みなら通常ページへ
-        res.redirect('/');
-    });
-});
 
 app.get("/set-username", (req, res) => {
   if (!req.user) return res.redirect("/");
