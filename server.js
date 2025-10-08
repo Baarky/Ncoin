@@ -171,6 +171,7 @@ app.get("/admin", (req, res) => {
 });
 
 // --- Google認証 ---
+app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 app.get("/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   async (req, res) => {
@@ -181,7 +182,6 @@ app.get("/auth/google/callback",
     res.redirect("/dashboard");
   }
 );
-
 // --- ログアウト ---
 app.get("/logout", (req, res, next) => {
   req.logout(err => {
