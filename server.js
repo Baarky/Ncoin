@@ -213,6 +213,8 @@ app.get("/set-username", (req, res) => {
 });
 
 app.post('/set-username', async (req, res) => {
+    console.log('req.body:', req.body);
+    console.log('req.user:', req.user);
     if (!req.user) return res.redirect("/");
     const username = req.body.username;
     req.user.username = username;
