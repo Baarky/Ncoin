@@ -175,8 +175,8 @@ app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "em
 app.get("/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   async (req, res) => {
-    // ユーザ名が未設定ならlogin.htmlへ、設定済みならdashboardへ
-    if (!req.user.name) {
+    // username(=自分で設定したユーザ名)で判定
+    if (!req.user.username) {
       return res.redirect("/login.html");
     }
     res.redirect("/dashboard");
@@ -240,12 +240,12 @@ app.get("/set-username", (req, res) => {
 });
 
 // ユーザ名保存
-app.post("/set-username", async (req, res) => {
-  if (!req.user) return res.redirect("/");
-  const { username } = req.body;
-  req.user.name = username;
-  await req.user.save();
-  res.redirect("/dashboard");
+app.post('/set-username', async (req, res) => {
+    if (!req.user) return res.redirect("/");
+    const username = req.body.username;
+    req.user.username = username;   // ←こちらに
+    await req.user.save();
+    res.redirect("/dashboard");
 });
 
 
