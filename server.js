@@ -10,7 +10,7 @@ const app = express();
 
 // --- ミドルウェア ---
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // POSTフォームのため（body-parser不要）
+app.use(express.urlencoded({ extended: true })); // POSTフォームのため
 
 // --- セッション設定 ---
 app.set('trust proxy', 1);
@@ -140,9 +140,9 @@ app.post("/send", async (req, res) => {
 // --- ログイン情報取得 ---
 app.get("/api/me", (req, res) => {
   if (!req.user) return res.status(401).json({ error: "ログインしてください" });
-
   res.json({
     name: req.user.name,
+    username: req.user.username, // ← usernameも返す
     email: req.user.email,
     balance: req.user.Wallet.balance,
     isAdmin: isAdmin(req.user)
@@ -213,20 +213,16 @@ app.get("/set-username", (req, res) => {
 });
 
 app.post('/set-username', async (req, res) => {
-      console.log('req.body:', req.body);
-    console.log('req.user:', req.user);
-    if (!req.user) return res.redirect("/");
-    const username = req.body.username;
-    req.user.username = username;
-    await req.user.save();
-    try {
+  if (!req.user) return res.redirect("/");
+  const username = req.body.username;
+  try {
     req.user.username = username;
     await req.user.save();
     console.log("save後:", req.user.username);
-} catch(err) {
+  } catch(err) {
     console.error("saveエラー:", err);
-}
-    res.redirect("/dashboard");
+  }
+  res.redirect("/dashboard");
 });
 
 // --- サーバ起動 ---
