@@ -143,6 +143,7 @@ app.get("/api/me", (req, res) => {
 
   res.json({
     name: req.user.name,
+    username: req.user.username, // ←これを追加
     email: req.user.email,
     balance: req.user.Wallet.balance,
     isAdmin: isAdmin(req.user)
