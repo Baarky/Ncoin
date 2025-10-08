@@ -5,21 +5,12 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const QRCode = require("qrcode");
 const { sequelize, User, Wallet } = require("./models");
-const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('your_database.db');
 
-db.run('ALTER TABLE users ADD COLUMN username TEXT', function(err) {
-  if (err) {
-    return console.error(err.message);
-  }
-  console.log('usernameカラムを追加しました');
-});
-
-db.close();
 const app = express();
 
 // --- ミドルウェア ---
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // ここを追加・上に移動
 
 // --- セッション設定 ---
 app.set('trust proxy', 1); // もしリバースプロキシの背後にある場合
@@ -34,7 +25,6 @@ app.use(
 
 app.use(passport.initialize());
 app.use(passport.session());
-
 // --- Passport 設定 ---
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser(async (id, done) => {
@@ -231,8 +221,8 @@ app.post('/set-username', async (req, res) => {
 });
 
 
-const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: true }));
+const bodyParser = require('body-parser');
 
 
 // --- サーバ起動 ---

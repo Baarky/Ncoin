@@ -9,7 +9,7 @@ const User = sequelize.define("User", {
   googleId: { type: DataTypes.STRING, unique: true },
   name: DataTypes.STRING,
   email: DataTypes.STRING,
-  username: DataTypes.STRING  // ← これを追加
+  username: DataTypes.STRING
 });
 
 const Wallet = sequelize.define("Wallet", {
