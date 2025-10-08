@@ -213,9 +213,10 @@ app.get("/auth/google/callback",
 );
 
 // ユーザ名入力ページ
+app.get("/", (req, res) => res.sendFile(__dirname + "/public/index.html"));
 app.get("/set-username", (req, res) => {
   if (!req.user) return res.redirect("/");
-  res.sendFile(__dirname + "/public/set-username.html");
+  res.sendFile(__dirname + "/public/login.html");
 });
 
 // ユーザ名保存
