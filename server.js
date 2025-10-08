@@ -226,6 +226,7 @@ app.post('/set-username', async (req, res) => {
 // --- サーバ起動 ---
 (async () => {
   await sequelize.sync();
+  console.log('DB path:', require('path').resolve('database.sqlite'));
   const port = process.env.PORT || 4000;
   app.listen(port, () => console.log(`✅ Server running on port ${port}`));
 })();
