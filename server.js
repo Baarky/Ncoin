@@ -211,16 +211,23 @@ app.post('/auth/phone/verify', async (req, res) => {
   });
 });
 // Google認証コールバック
-app.get("/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: "/" }),
-  async (req, res) => {
-    if (!req.user.name || req.user.name.trim() === "") {
-      // ユーザ名未設定なら入力ページへ
-      return res.redirect("/set-username");
-    }
-    res.redirect("/dashboard");
-  }
-);
+app.get('/auth/google/callback', passport.authenticate('google', {
+    failureRedirect: '/login'
+}), async (req, res) => {
+    const db = require('./db'); // sqlite3インスタンス
+    const userId = req.user.id; // ログインユーザのID（認証情報から取得）
+
+    // DBからユーザ名を確認
+    db.get('SELECT username FROM users WHERE id = ?', [userId], (err, row) => {
+        if (err) return res.status(500).send('DB error');
+        if (!row || !row.username) {
+            // ユーザ名が未設定ならlogin.htmlへリダイレクト
+            return res.redirect('/login.html');
+        }
+        // ユーザ名が設定済みなら通常ページへ
+        res.redirect('/');
+    });
+});
 
 app.get("/set-username", (req, res) => {
   if (!req.user) return res.redirect("/");
@@ -237,6 +244,20 @@ app.post("/set-username", async (req, res) => {
 });
 
 
+const bodyParser = require('body-parser');
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.post('/set-username', async (req, res) => {
+    const db = require('./db');
+    const userId = req.user.id; // 必要に応じてセッションやJWTから取得
+    const username = req.body.username;
+
+    // ユーザ名をDBに保存
+    db.run('UPDATE users SET username = ? WHERE id = ?', [username, userId], function(err) {
+        if (err) return res.status(500).send('DB error');
+        res.redirect('/'); // 保存後トップへ
+    });
+});
 // --- サーバ起動 ---
 (async () => {
   await sequelize.sync();
