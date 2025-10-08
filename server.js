@@ -5,24 +5,26 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const QRCode = require("qrcode");
 const { sequelize, User, Wallet } = require("./models");
-const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('your_database.db');
-// --- ミドルウェア ---
-app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: true })); // ← ここでOK
-// ここで必ずrequire！
-const bodyParser = require('body-parser');
 
-db.run('ALTER TABLE users ADD COLUMN username TEXT', function(err) {
-  if (err) {
-    return console.error(err.message);
-  }
-  console.log('usernameカラムを追加しました');
-});
-
-db.close();
 const app = express();
 
+// --- ミドルウェア ---
+app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // POSTフォームのため（body-parser不要）
+
+// --- セッション設定 ---
+app.set('trust proxy', 1);
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "defaultsecret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: { httpOnly: true, secure: true, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 },
+  })
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 // --- Passport 設定 ---
 passport.serializeUser((user, done) => done(null, user.id));
@@ -35,7 +37,7 @@ const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcrypt');
 
 passport.use(new LocalStrategy(
-  { usernameField: 'email' }, // email or username
+  { usernameField: 'email' },
   async (email, password, done) => {
     const user = await User.findOne({ where: { email } });
     if (!user) return done(null, false, { message: "ユーザーが存在しません" });
@@ -70,8 +72,8 @@ passport.use(
 
 // --- 管理者判定 ---
 function isAdmin(user) {
-  console.log("Admin check:", user.email, process.env.ADMIN_EMAIL);
-  return user && user.email.trim().toLowerCase() === process.env.ADMIN_EMAIL.trim().toLowerCase();
+  return user && user.email && process.env.ADMIN_EMAIL &&
+    user.email.trim().toLowerCase() === process.env.ADMIN_EMAIL.trim().toLowerCase();
 }
 
 // --- 管理者ポイント付与 ---
@@ -96,11 +98,11 @@ app.get("/api/qrcode", async (req, res) => {
   const qrDataUrl = await QRCode.toDataURL(url);
   res.json({ qr: qrDataUrl });
 });
-const rateLimit = require('express-rate-limit');
 
+const rateLimit = require('express-rate-limit');
 const sendLimiter = rateLimit({
-  windowMs: 60*1000, // 1分間
-  max: 10,           // 最大10回
+  windowMs: 60*1000,
+  max: 10,
   message: "送金リクエストが多すぎます。1分後に再度お試しください。"
 });
 
@@ -135,7 +137,6 @@ app.post("/send", async (req, res) => {
   }
 });
 
-
 // --- ログイン情報取得 ---
 app.get("/api/me", (req, res) => {
   if (!req.user) return res.status(401).json({ error: "ログインしてください" });
@@ -164,13 +165,13 @@ app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "em
 app.get("/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   async (req, res) => {
-    // username(=自分で設定したユーザ名)で判定
     if (!req.user.username) {
       return res.redirect("/set-username");
     }
     res.redirect("/dashboard");
   }
 );
+
 // --- ログアウト ---
 app.get("/logout", (req, res, next) => {
   req.logout(err => {
@@ -178,23 +179,23 @@ app.get("/logout", (req, res, next) => {
     res.redirect("/");
   });
 });
-// ローカル（メール+パスワード）ログイン
+
+// --- ローカル（メール+パスワード）ログイン
 app.post('/auth/local', passport.authenticate('local', {
   successRedirect: '/dashboard',
   failureRedirect: '/'
 }));
 
-// 電話番号コード送信
+// --- 電話番号コード送信
 app.post('/auth/phone', async (req, res) => {
   const { phone } = req.body;
-  const code = Math.floor(100000 + Math.random()*900000); // 6桁
-  // DBに保存
+  const code = Math.floor(100000 + Math.random()*900000);
   await User.update({ smsCode: code }, { where: { phone } });
   // SMS送信 (Twilioなど)
   res.send("コード送信しました");
 });
 
-// 電話番号コード認証
+// --- 電話番号コード認証
 app.post('/auth/phone/verify', async (req, res) => {
   const { phone, code } = req.body;
   const user = await User.findOne({ where: { phone, smsCode: code } });
@@ -205,12 +206,12 @@ app.post('/auth/phone/verify', async (req, res) => {
   });
 });
 
+// --- ユーザ名設定ページ
 app.get("/set-username", (req, res) => {
   if (!req.user) return res.redirect("/");
   res.sendFile(__dirname + "/public/login.html");
 });
 
-// ユーザ名保存
 app.post('/set-username', async (req, res) => {
     if (!req.user) return res.redirect("/");
     const username = req.body.username;
@@ -218,11 +219,6 @@ app.post('/set-username', async (req, res) => {
     await req.user.save();
     res.redirect("/dashboard");
 });
-
-
-app.use(bodyParser.urlencoded({ extended: true }));
-const bodyParser = require('body-parser');
-
 
 // --- サーバ起動 ---
 (async () => {
