@@ -5,7 +5,17 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const QRCode = require("qrcode");
 const { sequelize, User, Wallet } = require("./models");
+const sqlite3 = require('sqlite3').verbose();
+const db = new sqlite3.Database('your_database.db');
 
+db.run('ALTER TABLE users ADD COLUMN username TEXT', function(err) {
+  if (err) {
+    return console.error(err.message);
+  }
+  console.log('usernameカラムを追加しました');
+});
+
+db.close();
 const app = express();
 
 // --- ミドルウェア ---
