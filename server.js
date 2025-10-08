@@ -143,9 +143,7 @@ app.get("/api/me", (req, res) => {
 
   res.json({
     name: req.user.name,
-    username: req.user.username,
     email: req.user.email,
-    
     balance: req.user.Wallet.balance,
     isAdmin: isAdmin(req.user)
   });
@@ -215,18 +213,25 @@ app.get("/set-username", (req, res) => {
 });
 
 app.post('/set-username', async (req, res) => {
+      console.log('req.body:', req.body);
+    console.log('req.user:', req.user);
     if (!req.user) return res.redirect("/");
     const username = req.body.username;
     req.user.username = username;
     await req.user.save();
-    console.log("save後:", req.user.username); // 追加
+    try {
+    req.user.username = username;
+    await req.user.save();
+    console.log("save後:", req.user.username);
+} catch(err) {
+    console.error("saveエラー:", err);
+}
     res.redirect("/dashboard");
 });
 
 // --- サーバ起動 ---
 (async () => {
   await sequelize.sync();
-  console.log('DB path:', require('path').resolve('database.sqlite'));
   const port = process.env.PORT || 4000;
   app.listen(port, () => console.log(`✅ Server running on port ${port}`));
 })();
