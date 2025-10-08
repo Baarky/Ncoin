@@ -7,7 +7,9 @@ const QRCode = require("qrcode");
 const { sequelize, User, Wallet } = require("./models");
 const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('your_database.db');
-
+// --- ミドルウェア ---
+app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true })); // ← ここでOK
 // ここで必ずrequire！
 const bodyParser = require('body-parser');
 
@@ -21,9 +23,7 @@ db.run('ALTER TABLE users ADD COLUMN username TEXT', function(err) {
 db.close();
 const app = express();
 
-// --- ミドルウェア ---
-app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: true })); // ← ここでOK
+
 // --- Passport 設定 ---
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser(async (id, done) => {
