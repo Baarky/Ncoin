@@ -6,10 +6,11 @@
   <title>ユーザ名設定</title>
 </head>
 <body>
-  <h1>ユーザ名を入力してください</h1>
+  <h1>ユーザ名を設定してください</h1>
   <form action="/set-username" method="POST">
-    <input type="text" name="username" placeholder="ユーザ名" required>
-    <button type="submit">保存してダッシュボードへ</button>
+    <label for="username">ユーザ名：</label>
+    <input type="text" id="username" name="username" required>
+    <button type="submit">保存</button>
   </form>
 </body>
 </html>

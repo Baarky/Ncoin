@@ -212,8 +212,6 @@ app.get("/auth/google/callback",
   }
 );
 
-// ユーザ名入力ページ
-app.get("/", (req, res) => res.sendFile(__dirname + "/public/index.html"));
 app.get("/set-username", (req, res) => {
   if (!req.user) return res.redirect("/");
   res.sendFile(__dirname + "/public/login.html");
@@ -227,7 +225,6 @@ app.post("/set-username", async (req, res) => {
   await req.user.save();
   res.redirect("/dashboard");
 });
-
 
 
 // --- サーバ起動 ---
