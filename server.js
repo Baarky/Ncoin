@@ -243,7 +243,7 @@ app.get("/set-username", (req, res) => {
 app.post('/set-username', async (req, res) => {
     if (!req.user) return res.redirect("/");
     const username = req.body.username;
-    req.user.username = username;   // ←こちらに
+    req.user.username = username;
     await req.user.save();
     res.redirect("/dashboard");
 });
@@ -252,17 +252,7 @@ app.post('/set-username', async (req, res) => {
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.post('/set-username', async (req, res) => {
-    const db = require('./db');
-    const userId = req.user.id; // 必要に応じてセッションやJWTから取得
-    const username = req.body.username;
 
-    // ユーザ名をDBに保存
-    db.run('UPDATE users SET username = ? WHERE id = ?', [username, userId], function(err) {
-        if (err) return res.status(500).send('DB error');
-        res.redirect('/'); // 保存後トップへ
-    });
-});
 // --- サーバ起動 ---
 (async () => {
   await sequelize.sync();
