@@ -177,7 +177,7 @@ app.get("/auth/google/callback",
   async (req, res) => {
     // username(=自分で設定したユーザ名)で判定
     if (!req.user.username) {
-      return res.redirect("/login.html");
+      return res.redirect("/set-username");
     }
     res.redirect("/dashboard");
   }
