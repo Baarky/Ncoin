@@ -170,6 +170,18 @@ app.get("/admin", (req, res) => {
   res.sendFile(__dirname + "/public/admin.html");
 });
 
+// --- Google認証 ---
+app.get("/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/" }),
+  async (req, res) => {
+    // ユーザ名が未設定ならlogin.htmlへ、設定済みならdashboardへ
+    if (!req.user.name) {
+      return res.redirect("/login.html");
+    }
+    res.redirect("/dashboard");
+  }
+);
+
 // --- ログアウト ---
 app.get("/logout", (req, res, next) => {
   req.logout(err => {
