@@ -142,7 +142,7 @@ app.get("/api/me", (req, res) => {
   if (!req.user) return res.status(401).json({ error: "ログインしてください" });
   res.json({
     name: req.user.name,
-    username: req.user.username, // ← usernameも返す
+    username: req.user.username, // 互換で残していても可
     email: req.user.email,
     balance: req.user.Wallet.balance,
     isAdmin: isAdmin(req.user)
@@ -165,7 +165,8 @@ app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "em
 app.get("/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   async (req, res) => {
-    if (!req.user.username) {
+    // ← ここを username ではなく name で判定する
+    if (!req.user.name) {
       return res.redirect("/set-username");
     }
     res.redirect("/dashboard");
@@ -212,13 +213,14 @@ app.get("/set-username", (req, res) => {
   res.sendFile(__dirname + "/public/login.html");
 });
 
+// name カラムに保存するよう変更
 app.post('/set-username', async (req, res) => {
   if (!req.user) return res.redirect("/");
   const username = req.body.username;
   try {
-    req.user.username = username;
+    req.user.name = username;       // ← ここを name にする
     await req.user.save();
-    console.log("save後:", req.user.username);
+    console.log("save後 name:", req.user.name);
   } catch(err) {
     console.error("saveエラー:", err);
   }
