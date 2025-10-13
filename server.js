@@ -217,13 +217,17 @@ app.get("/set-username", (req, res) => {
 app.post('/set-username', async (req, res) => {
   if (!req.user) return res.redirect("/");
   const username = req.body.username;
-  try {
-    req.user.name = username;       // ← ここを name にする
-    await req.user.save();
-    console.log("save後 name:", req.user.name);
-  } catch(err) {
-    console.error("saveエラー:", err);
-  }
+try {
+  req.user.name = username; // or req.user.username depending on your change
+  await req.user.save();
+  console.log("save後:", req.user.name || req.user.username);
+
+  // 再取得して DB に確実に入っているか確認
+  const fresh = await User.findByPk(req.user.id, { raw: true });
+  console.log('fresh from sequelize:', fresh);
+} catch (err) {
+  console.error('saveエラー:', err);
+}
   res.redirect("/dashboard");
 });
 
