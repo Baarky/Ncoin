@@ -57,17 +57,22 @@ passport.use(
       callbackURL: process.env.GOOGLE_CALLBACK_URL,
     },
     async (accessToken, refreshToken, profile, done) => {
-      let user = await User.findOne({ where: { googleId: profile.id } });
-      if (!user) {
-        user = await User.create({
-          googleId: profile.id,
-          name: profile.displayName,
-          email: profile.emails[0].value,
-        });
-        await Wallet.create({ UserId: user.id, balance: 1000 });
+      try {
+        let user = await User.findOne({ where: { googleId: profile.id } });
+        if (!user) {
+          user = await User.create({
+            googleId: profile.id,
+            name: profile.displayName,
+            email: profile.emails[0].value,
+          });
+          await Wallet.create({ UserId: user.id, balance: 1000 });
+        }
+        user = await User.findByPk(user.id, { include: Wallet });
+        done(null, user);
+      } catch (err) {
+        console.error("GoogleStrategy error:", err);
+        done(err);
       }
-      user = await User.findByPk(user.id, { include: Wallet });
-      done(null, user);
     }
   )
 );
@@ -229,29 +234,7 @@ app.post('/set-username', async (req, res) => {
   res.redirect("/dashboard");
 });
 
-passport.use(
-  new GoogleStrategy(
-    { /* ... */ },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        let user = await User.findOne({ where: { googleId: profile.id } });
-        if (!user) {
-          user = await User.create({
-            googleId: profile.id,
-            name: profile.displayName,
-            email: profile.emails[0].value,
-          });
-          await Wallet.create({ UserId: user.id, balance: 1000 });
-        }
-        user = await User.findByPk(user.id, { include: Wallet });
-        done(null, user);
-      } catch (err) {
-        console.error("GoogleStrategy error:", err);
-        done(err);
-      }
-    }
-  )
-);
+
 // --- サーバ起動 ---
 (async () => {
   await sequelize.sync();
