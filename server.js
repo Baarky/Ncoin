@@ -1,4 +1,6 @@
 require("dotenv").config();
+const path = require('path');
+console.log('★ DB FILE PATH:', path.resolve('database.sqlite'));
 const express = require("express");
 const session = require("express-session");
 const passport = require("passport");
