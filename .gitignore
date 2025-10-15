@@ -2,5 +2,4 @@ Ncoin/
 node_modules/
 database.sqlite
 sessions.sqlite
-.env
 
