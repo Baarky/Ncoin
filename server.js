@@ -234,7 +234,10 @@ app.post('/set-username', async (req, res) => {
   res.redirect("/dashboard");
 });
 
-
+app.get('/debug/all-users', async (req, res) => {
+  const users = await User.findAll({ raw: true });
+  res.json(users);
+});
 // --- サーバ起動 ---
 (async () => {
   await sequelize.sync();
