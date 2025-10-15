@@ -59,14 +59,14 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         let user = await User.findOne({ where: { googleId: profile.id } });
-        if (!user) {
-          user = await User.create({
-            googleId: profile.id,
-            name: profile.displayName,
-            email: profile.emails[0].value,
-          });
-          await Wallet.create({ UserId: user.id, balance: 1000 });
-        }
+if (!user) {
+    user = await User.create({
+      googleId: profile.id,
+      name: null, // または name: "" でも可
+      email: profile.emails[0].value,
+    });
+    await Wallet.create({ UserId: user.id, balance: 1000 });
+}
         user = await User.findByPk(user.id, { include: Wallet });
         done(null, user);
       } catch (err) {
@@ -172,13 +172,13 @@ app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "em
 app.get("/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   async (req, res) => {
-    // ← ここを username ではなく name で判定する
     if (!req.user.name) {
       return res.redirect("/set-username");
     }
     res.redirect("/dashboard");
   }
 );
+
 
 // --- ログアウト ---
 app.get("/logout", (req, res, next) => {
@@ -217,26 +217,25 @@ app.post('/auth/phone/verify', async (req, res) => {
 // --- ユーザ名設定ページ
 app.get("/set-username", (req, res) => {
   if (!req.user) return res.redirect("/");
-  res.sendFile(__dirname + "/public/login.html");
+  res.sendFile(__dirname + "/public/login.html"); // ユーザー名入力ページ
 });
 
-// name カラムに保存するよう変更
 app.post('/set-username', async (req, res) => {
   if (!req.user) return res.redirect("/");
   const username = req.body.username;
+  if (!username || !username.trim()) {
+    // 未入力時のエラー処理を追加推奨
+    return res.status(400).send("ユーザー名を入力してください。");
+  }
   try {
-    req.user.name = username;       // ← ここを name にする
+    req.user.name = username.trim();
     await req.user.save();
     console.log("save後 name:", req.user.name);
   } catch(err) {
     console.error("saveエラー:", err);
+    return res.status(500).send("保存時エラー");
   }
   res.redirect("/dashboard");
-});
-
-app.get('/debug/all-users', async (req, res) => {
-  const users = await User.findAll({ raw: true });
-  res.json(users);
 });
 // --- サーバ起動 ---
 (async () => {
