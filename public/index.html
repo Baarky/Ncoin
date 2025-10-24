@@ -1,33 +1,79 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>Ncoin Login</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ncoin Login</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #f8f9fa;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 2rem;
+      text-align: center;
+      width: 300px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0069d9;
+    }
+  </style>
 </head>
 <body>
-<h2>ログイン</h2>
-<input type="text" id="nickname" placeholder="ニックネーム">
-<button id="loginBtn">ログイン</button>
+  <div class="card">
+    <h2>Ncoin ログイン</h2>
+    <p>ニックネームを入力してください</p>
+    <input id="nickname" placeholder="例: Rei" />
+    <button id="loginBtn">ログイン</button>
+  </div>
 
-<script>
-document.getElementById("loginBtn").addEventListener("click", async () => {
-  const nickname = document.getElementById("nickname").value.trim();
-  if (!nickname) return alert("ニックネームを入力してください");
+  <script>
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const nickname = document.getElementById("nickname").value.trim();
+      if (!nickname) {
+        alert("ニックネームを入力してください。");
+        return;
+      }
 
-  const res = await fetch("/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ nickname })
-  });
-  const data = await res.json();
-  if (!data.success) return alert(data.error || "ログイン失敗");
+      const res = await fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname })
+      });
 
-  // サーバー保存なし、フロントに保存
-  localStorage.setItem("anonId", data.anonId);
-  localStorage.setItem("nickname", nickname);
-
-  window.location.href = "/dashboard";
-});
-</script>
+      const data = await res.json();
+      if (data.success) {
+        // localStorageに保存（サーバーには保存しない）
+        localStorage.setItem("nickname", data.nickname);
+        window.location.href = "/dashboard";
+      } else {
+        alert(data.error);
+      }
+    });
+  </script>
 </body>
 </html>
