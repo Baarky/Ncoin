@@ -1,134 +1,157 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta charset="utf-8">
-  <title>ダッシュボード</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ncoin Dashboard</title>
+<style>
+body { font-family: sans-serif; background: #eef1f5; margin: 0; padding: 2rem; }
+.card { background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 2rem; margin-bottom: 2rem; width: 350px; }
+input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; margin-top: 10px; }
+button { margin-top: 10px; padding: 10px 20px; border: none; border-radius: 8px; background-color: #007bff; color: #fff; cursor: pointer; }
+button:hover { background-color: #0069d9; }
+.logout { background-color: #dc3545; }
+.logout:hover { background-color: #c82333; }
+h3 { margin-top: 1rem; margin-bottom: 0.5rem; }
+#qr { width: 200px; height: 200px; margin-top: 10px; display: none; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+td, th { border: 1px solid #ccc; padding: 6px; text-align: center; }
+</style>
 </head>
 <body>
-  <h2>自分の送金用QR</h2>
-  <img id="myQR" alt="QRコードを生成中…">
-  <button id="adminBtn" style="display:none;" onclick="location.href='/admin'">管理者ページ</button>
 
-  <h1>ようこそ <span id="username"></span></h1>
-  <p>残高: <span id="balance"></span> ポイント</p>
+<div class="card">
+  <h2 id="title"></h2>
+  <p>💰 所持金: <span id="balance"></span> Ncoin</p>
 
-  <h2>送金フォーム</h2>
-  <input type="email" id="toEmail" placeholder="相手のメール" class="form">
-  <input type="number" id="amount" placeholder="送金額" class="form">
-  <button onclick="send()">送金</button>
+  <h3>💸 手動送金</h3>
+  <input id="toUser" placeholder="送金相手のニックネーム">
+  <input id="amount" type="number" placeholder="送金額" min="1">
+  <button id="sendBtn">送金する</button>
+  <div id="sendResult" style="margin-top:10px; color:#007bff;"></div>
+</div>
 
-  <pre id="output"></pre>
+<div class="card">
+  <h3>📜 送金履歴</h3>
+  <table>
+    <thead><tr><th>日付</th><th>相手</th><th>金額</th><th>種類</th></tr></thead>
+    <tbody id="historyBody"></tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>🏆 全プレイヤーランキング</h3>
+  <table>
+    <thead><tr><th>順位</th><th>プレイヤー</th><th>所持金</th></tr></thead>
+    <tbody id="rankingBody"></tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>📱 自分のQRコード</h3>
+  <button id="qrBtn">QRコードを表示</button>
+  <img id="qr" alt="QRコード">
+</div>
+
+<button class="logout" id="logoutBtn">ログアウト</button>
 
 <script>
-async function loadUser() {
-  const res = await fetch('/api/me');
-  const data = await res.json();
+const nickname = localStorage.getItem("nickname");
+if(!nickname){ window.location.href="/"; }
 
-  document.getElementById('username').innerText = data.name;
-  document.getElementById('balance').innerText = data.balance;
+document.getElementById("title").textContent = nickname + " さんのダッシュボード";
 
-  // 管理者判定
-  if (data.isAdmin) {
-    document.getElementById('adminBtn').style.display = 'block';
+// 初期所持金設定
+let players = JSON.parse(localStorage.getItem("players")||"{}");
+if(!(nickname in players)) players[nickname]=1000;
+
+// 履歴
+let sendHistory = JSON.parse(localStorage.getItem("sendHistory")||"[]");
+
+// --- 所持金更新関数 ---
+function updateBalances(){
+  // リセット全プレイヤー残高
+  for(let p in players){
+    players[p] = players[p]; // 既存値保持
   }
-
-  // QR生成
-  const qrRes = await fetch('/api/qrcode');
-  const qrData = await qrRes.json();
-  document.getElementById('myQR').src = qrData.qr;
-}
-
-// ページロード時に呼ぶ
-loadUser();
-
-async function send() {
-  const toEmail = document.getElementById('toEmail').value;
-  const amount = document.getElementById('amount').value;
-
-  const res = await fetch('/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ toEmail, amount })
+  // 履歴反映
+  sendHistory.forEach(h=>{
+    if(h.from in players) players[h.from]-=Number(h.amount);
+    if(h.to in players) players[h.to]+=Number(h.amount);
+    else players[h.to]=Number(h.amount);
   });
-
-  const data = await res.json();
-  document.getElementById('output').innerText = JSON.stringify(data, null, 2);
-
-  if (data.from !== undefined) {
-    document.getElementById('balance').innerText = data.from;
-  }
-}
-async function loadUser() {
-  const res = await fetch('/api/me');
-  const data = await res.json();
-
-  document.getElementById('username').innerText = data.name;
-  document.getElementById('balance').innerText = data.balance;
-
-  // 管理者判定
-  if (data.isAdmin) {
-    document.getElementById('adminBtn').style.display = 'block';
-  }
-}
-async function loadQR() {
-  const res = await fetch('/api/qrcode');
-  const data = await res.json();
-  document.getElementById('myQR').src = data.qr;
+  localStorage.setItem("players",JSON.stringify(players));
+  document.getElementById("balance").textContent = players[nickname];
 }
 
-loadQR();
+// --- 送金処理 ---
+document.getElementById("sendBtn").addEventListener("click",()=>{
+  const toUser = document.getElementById("toUser").value.trim();
+  const amount = Number(document.getElementById("amount").value.trim());
+  const resultEl = document.getElementById("sendResult");
+
+  if(!toUser || !amount){ resultEl.style.color="red"; resultEl.textContent="相手と金額を入力してください"; return; }
+  if(amount>players[nickname]){ resultEl.style.color="red"; resultEl.textContent="所持金不足です"; return; }
+
+  // 履歴に追加
+  sendHistory.push({from:nickname,to:toUser,amount,date:new Date().toLocaleString()});
+  localStorage.setItem("sendHistory",JSON.stringify(sendHistory));
+
+  // 相手が未登録なら初期所持金1000
+  if(!(toUser in players)) players[toUser]=1000;
+  localStorage.setItem("players",JSON.stringify(players));
+
+  resultEl.style.color="#007bff";
+  resultEl.textContent = `✅ ${toUser} さんに ${amount} Ncoin 送金しました`;
+
+  updateBalances();
+  renderHistory();
+  renderRanking();
+});
+
+// --- 送金履歴表示 ---
+function renderHistory(){
+  const tbody = document.getElementById("historyBody");
+  tbody.innerHTML="";
+  const reversed = [...sendHistory].reverse();
+  reversed.forEach(h=>{
+    let type = h.from===nickname?"送信":"受信";
+    let other = h.from===nickname?h.to:h.from;
+    let tr = `<tr><td>${h.date}</td><td>${other}</td><td>${h.amount}</td><td>${type}</td></tr>`;
+    tbody.innerHTML+=tr;
+  });
+}
+
+// --- ランキング表示 ---
+function renderRanking(){
+  const tbody = document.getElementById("rankingBody");
+  tbody.innerHTML="";
+  const arr = Object.entries(players).sort((a,b)=>b[1]-a[1]);
+  arr.forEach(([name,balance],idx)=>{
+    let tr = `<tr><td>${idx+1}</td><td>${name}</td><td>${balance}</td></tr>`;
+    tbody.innerHTML+=tr;
+  });
+}
+
+// --- 初期表示 ---
+updateBalances();
+renderHistory();
+renderRanking();
+
+// --- QRコード生成 ---
+document.getElementById("qrBtn").addEventListener("click", async()=>{
+  const res = await fetch("/api/qrcode",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nickname})});
+  const data = await res.json();
+  if(data.qr){const img=document.getElementById("qr"); img.src=data.qr; img.style.display="block"; }
+  else alert(data.error||"QRコード生成失敗");
+});
+
+// --- ログアウト ---
+document.getElementById("logoutBtn").addEventListener("click",()=>{
+  localStorage.removeItem("nickname");
+  window.location.href="/";
+});
 </script>
 
 </body>
 </html>
-<style>
-
-input.form {
-  width: 90vw;        /* 画面幅の90% */
-  max-width: 500px;   /* 最大幅を500pxに拡大 */
-  padding: 25px;      /* 内側の余白を大きく */
-  font-size: 24px;    /* 文字サイズを大きく */
-  margin: 15px 0;     /* 上下の余白 */
-  border-radius: 12px; /* 角を丸く */
-  border: 2px solid #888; /* 枠線を少し太く */
-  box-sizing: border-box;  /* パディング込みで幅を計算 */
-}
-
-body {
-  font-family: sans-serif;
-  margin: 0;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-img#myQR {
-  width: 80vw;        /* 画面幅の80% */
-  max-width: 300px;   /* 最大幅を300pxに制限 */
-  height: auto;       /* 縦横比を保持 */
-}
-
-button {
-  padding: 10px 20px;
-  font-size: 16px;
-  margin-top: 10px;
-  width: 80vw;
-  max-width: 300px;
-}
-
-/* ここを追加 */
-input.form {
-  width: 80vw;        /* 画面幅の80% */
-  max-width: 300px;   /* 最大幅 */
-  padding: 15px;      /* 内側の余白 */
-  font-size: 18px;    /* 文字サイズを大きく */
-  margin: 10px 0;     /* 上下に余白 */
-  border-radius: 8px; /* 角丸 */
-  border: 1px solid #ccc; /* 枠線 */
-  box-sizing: border-box;  /* パディング込みで幅を計算 */
-}
-</style>
-
