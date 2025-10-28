@@ -4,11 +4,19 @@ const session = require('express-session');
 const path = require('path');
 const app = express();
 
+// ポートは Railway の環境変数 PORT を使う
+const PORT = process.env.PORT || 3000;
+
 app.use(express.json());
 app.use(session({ secret: 'secret', resave: false, saveUninitialized: true }));
 
-// ✅ ← これが重要！ public フォルダを静的に配信
+// public を静的配信
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ルートでログインページ
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/index.html'));
+});
 
 // ニックネームでログイン
 app.post('/login', (req, res) => {
@@ -40,7 +48,7 @@ app.post('/send', (req, res) => {
   res.json({ success: true });
 });
 
-// ランキング取得
+// ランキング
 app.get('/ranking', (req, res) => {
   const users = JSON.parse(fs.readFileSync('users.json'));
   const ranking = Object.entries(users)
@@ -48,10 +56,4 @@ app.get('/ranking', (req, res) => {
   res.json(ranking);
 });
 
-// ルート（ログイン画面）
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'));
-});
-
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
