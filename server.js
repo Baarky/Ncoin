@@ -1,65 +1,56 @@
-// server.js
-const express = require("express");
-const path = require("path");
-const bodyParser = require("body-parser");
-const QRCode = require("qrcode");
-const rateLimit = require("express-rate-limit");
-
+const express = require('express');
+const fs = require('fs');
+const session = require('express-session');
+const path = require('path');
 const app = express();
-const PORT = process.env.PORT || 4000;
 
-// ===== ミドルウェア =====
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.json());
+app.use(session({ secret: 'secret', resave: false, saveUninitialized: true }));
 
-// ===== レートリミット =====
-const sendLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 10,
-  message: "送金リクエストが多すぎます。1分後に再度お試しください。"
-});
+// ✅ ← これが重要！ public フォルダを静的に配信
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ===== ログインAPI =====
-app.post("/login", (req, res) => {
+// ニックネームでログイン
+app.post('/login', (req, res) => {
   const { nickname } = req.body;
-  if (!nickname || nickname.trim() === "") {
-    return res.status(400).json({ error: "ニックネームを入力してください。" });
-  }
-
-  // サーバー側には保存せず、フロント側がlocalStorageで保持
-  res.json({ success: true, nickname });
+  let users = JSON.parse(fs.readFileSync('users.json'));
+  if (!users[nickname]) users[nickname] = { balance: 1000, history: [] };
+  fs.writeFileSync('users.json', JSON.stringify(users));
+  req.session.user = nickname;
+  res.json({ success: true });
 });
 
-// ===== QRコード生成API =====
-app.post("/api/qrcode", async (req, res) => {
-  const { nickname } = req.body;
-  if (!nickname || nickname.trim() === "") {
-    return res.status(400).json({ error: "ニックネームが指定されていません。" });
-  }
+// 送金
+app.post('/send', (req, res) => {
+  const from = req.session.user;
+  const { to, amount } = req.body;
+  let users = JSON.parse(fs.readFileSync('users.json'));
 
-  const baseUrl = process.env.RENDER_EXTERNAL_URL || `localhost:${PORT}`;
-  const url = `https://${baseUrl}/sendpage?to=${encodeURIComponent(nickname)}`;
+  if (!users[to]) return res.status(400).json({ error: '送金先が存在しません' });
+  if (users[from].balance < amount) return res.status(400).json({ error: '残高不足' });
 
-  try {
-    const qrDataUrl = await QRCode.toDataURL(url);
-    res.json({ qr: qrDataUrl });
-  } catch (err) {
-    console.error("QRコード生成エラー:", err);
-    res.status(500).json({ error: "QRコード生成に失敗しました。" });
-  }
+  users[from].balance -= amount;
+  users[to].balance += amount;
+
+  const date = new Date().toISOString();
+  users[from].history.push({ to, amount, date });
+  users[to].history.push({ from, amount, date });
+
+  fs.writeFileSync('users.json', JSON.stringify(users));
+  res.json({ success: true });
 });
 
-// ===== ページルーティング =====
-app.get("/dashboard", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "dashboard.html"));
+// ランキング取得
+app.get('/ranking', (req, res) => {
+  const users = JSON.parse(fs.readFileSync('users.json'));
+  const ranking = Object.entries(users)
+    .sort((a, b) => b[1].balance - a[1].balance);
+  res.json(ranking);
 });
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+// ルート（ログイン画面）
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
-// ===== サーバー起動 =====
-app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-});
+app.listen(3000, () => console.log('Server running on http://localhost:3000'));

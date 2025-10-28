@@ -1,78 +1,31 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ncoin Login</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background: #f8f9fa;
-    }
-    .card {
-      background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      padding: 2rem;
-      text-align: center;
-      width: 300px;
-    }
-    input {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      margin-top: 10px;
-    }
-    button {
-      margin-top: 15px;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      background-color: #007bff;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0069d9;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ログイン - Ncoin</title>
 </head>
 <body>
-  <div class="card">
-    <h2>Ncoin ログイン</h2>
-    <p>ニックネームを入力してください</p>
-    <input id="nickname" placeholder="例: Rei" />
-    <button id="loginBtn">ログイン</button>
-  </div>
+  <h1>ログイン</h1>
+  <form id="loginForm">
+    <input type="text" id="nickname" placeholder="ニックネーム" required>
+    <button type="submit">ログイン</button>
+  </form>
 
   <script>
-    document.getElementById("loginBtn").addEventListener("click", async () => {
-      const nickname = document.getElementById("nickname").value.trim();
-      if (!nickname) {
-        alert("ニックネームを入力してください。");
-        return;
-      }
+    const form = document.getElementById('loginForm');
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const nickname = document.getElementById('nickname').value.trim();
+      if (!nickname) return alert('ニックネームを入力してください');
 
-      const res = await fetch("/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname })
-      });
+      // 初期ユーザー登録
+      let users = JSON.parse(localStorage.getItem('users') || '{}');
+      if (!users[nickname]) users[nickname] = { balance: 1000, history: [] };
+      localStorage.setItem('users', JSON.stringify(users));
 
-      const data = await res.json();
-      if (data.success) {
-        // localStorageに保存（サーバーには保存しない）
-        localStorage.setItem("nickname", data.nickname);
-        window.location.href = "/dashboard";
-      } else {
-        alert(data.error);
-      }
+      localStorage.setItem('nickname', nickname);
+      window.location.href = 'dashboard.html';
     });
   </script>
 </body>

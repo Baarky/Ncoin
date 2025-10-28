@@ -1,157 +1,25 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ncoin Dashboard</title>
-<style>
-body { font-family: sans-serif; background: #eef1f5; margin: 0; padding: 2rem; }
-.card { background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 2rem; margin-bottom: 2rem; width: 350px; }
-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; margin-top: 10px; }
-button { margin-top: 10px; padding: 10px 20px; border: none; border-radius: 8px; background-color: #007bff; color: #fff; cursor: pointer; }
-button:hover { background-color: #0069d9; }
-.logout { background-color: #dc3545; }
-.logout:hover { background-color: #c82333; }
-h3 { margin-top: 1rem; margin-bottom: 0.5rem; }
-#qr { width: 200px; height: 200px; margin-top: 10px; display: none; }
-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-td, th { border: 1px solid #ccc; padding: 6px; text-align: center; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ダッシュボード - Ncoin</title>
 </head>
 <body>
+  <h1>ようこそ、<span id="userName"></span></h1>
+  <p>所持金: <span id="balance"></span> Ncoin</p>
 
-<div class="card">
-  <h2 id="title"></h2>
-  <p>💰 所持金: <span id="balance"></span> Ncoin</p>
+  <h2>送金</h2>
+  <input type="text" id="sendTo" placeholder="送金先">
+  <input type="number" id="sendAmount" placeholder="金額">
+  <button id="sendBtn">送金</button>
 
-  <h3>💸 手動送金</h3>
-  <input id="toUser" placeholder="送金相手のニックネーム">
-  <input id="amount" type="number" placeholder="送金額" min="1">
-  <button id="sendBtn">送金する</button>
-  <div id="sendResult" style="margin-top:10px; color:#007bff;"></div>
-</div>
+  <h2>ランキング</h2>
+  <ol id="ranking"></ol>
 
-<div class="card">
-  <h3>📜 送金履歴</h3>
-  <table>
-    <thead><tr><th>日付</th><th>相手</th><th>金額</th><th>種類</th></tr></thead>
-    <tbody id="historyBody"></tbody>
-  </table>
-</div>
+  <h2>履歴</h2>
+  <ul id="history"></ul>
 
-<div class="card">
-  <h3>🏆 全プレイヤーランキング</h3>
-  <table>
-    <thead><tr><th>順位</th><th>プレイヤー</th><th>所持金</th></tr></thead>
-    <tbody id="rankingBody"></tbody>
-  </table>
-</div>
-
-<div class="card">
-  <h3>📱 自分のQRコード</h3>
-  <button id="qrBtn">QRコードを表示</button>
-  <img id="qr" alt="QRコード">
-</div>
-
-<button class="logout" id="logoutBtn">ログアウト</button>
-
-<script>
-const nickname = localStorage.getItem("nickname");
-if(!nickname){ window.location.href="/"; }
-
-document.getElementById("title").textContent = nickname + " さんのダッシュボード";
-
-// 初期所持金設定
-let players = JSON.parse(localStorage.getItem("players")||"{}");
-if(!(nickname in players)) players[nickname]=1000;
-
-// 履歴
-let sendHistory = JSON.parse(localStorage.getItem("sendHistory")||"[]");
-
-// --- 所持金更新関数 ---
-function updateBalances(){
-  // リセット全プレイヤー残高
-  for(let p in players){
-    players[p] = players[p]; // 既存値保持
-  }
-  // 履歴反映
-  sendHistory.forEach(h=>{
-    if(h.from in players) players[h.from]-=Number(h.amount);
-    if(h.to in players) players[h.to]+=Number(h.amount);
-    else players[h.to]=Number(h.amount);
-  });
-  localStorage.setItem("players",JSON.stringify(players));
-  document.getElementById("balance").textContent = players[nickname];
-}
-
-// --- 送金処理 ---
-document.getElementById("sendBtn").addEventListener("click",()=>{
-  const toUser = document.getElementById("toUser").value.trim();
-  const amount = Number(document.getElementById("amount").value.trim());
-  const resultEl = document.getElementById("sendResult");
-
-  if(!toUser || !amount){ resultEl.style.color="red"; resultEl.textContent="相手と金額を入力してください"; return; }
-  if(amount>players[nickname]){ resultEl.style.color="red"; resultEl.textContent="所持金不足です"; return; }
-
-  // 履歴に追加
-  sendHistory.push({from:nickname,to:toUser,amount,date:new Date().toLocaleString()});
-  localStorage.setItem("sendHistory",JSON.stringify(sendHistory));
-
-  // 相手が未登録なら初期所持金1000
-  if(!(toUser in players)) players[toUser]=1000;
-  localStorage.setItem("players",JSON.stringify(players));
-
-  resultEl.style.color="#007bff";
-  resultEl.textContent = `✅ ${toUser} さんに ${amount} Ncoin 送金しました`;
-
-  updateBalances();
-  renderHistory();
-  renderRanking();
-});
-
-// --- 送金履歴表示 ---
-function renderHistory(){
-  const tbody = document.getElementById("historyBody");
-  tbody.innerHTML="";
-  const reversed = [...sendHistory].reverse();
-  reversed.forEach(h=>{
-    let type = h.from===nickname?"送信":"受信";
-    let other = h.from===nickname?h.to:h.from;
-    let tr = `<tr><td>${h.date}</td><td>${other}</td><td>${h.amount}</td><td>${type}</td></tr>`;
-    tbody.innerHTML+=tr;
-  });
-}
-
-// --- ランキング表示 ---
-function renderRanking(){
-  const tbody = document.getElementById("rankingBody");
-  tbody.innerHTML="";
-  const arr = Object.entries(players).sort((a,b)=>b[1]-a[1]);
-  arr.forEach(([name,balance],idx)=>{
-    let tr = `<tr><td>${idx+1}</td><td>${name}</td><td>${balance}</td></tr>`;
-    tbody.innerHTML+=tr;
-  });
-}
-
-// --- 初期表示 ---
-updateBalances();
-renderHistory();
-renderRanking();
-
-// --- QRコード生成 ---
-document.getElementById("qrBtn").addEventListener("click", async()=>{
-  const res = await fetch("/api/qrcode",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nickname})});
-  const data = await res.json();
-  if(data.qr){const img=document.getElementById("qr"); img.src=data.qr; img.style.display="block"; }
-  else alert(data.error||"QRコード生成失敗");
-});
-
-// --- ログアウト ---
-document.getElementById("logoutBtn").addEventListener("click",()=>{
-  localStorage.removeItem("nickname");
-  window.location.href="/";
-});
-</script>
-
+  <script src="main.js"></script>
 </body>
 </html>
