@@ -1,134 +1,111 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ダッシュボード</title>
+  <meta charset="UTF-8" />
+  <title>Ncoin Dashboard</title>
   <style>
     body {
-      background: linear-gradient(to bottom right, #1e3c72, #2a5298);
-      color: #fff;
-      font-family: 'Segoe UI', sans-serif;
+      font-family: sans-serif;
       text-align: center;
+      background: #f0f2f5;
       margin: 0;
       padding: 0;
     }
-
     header {
-      background-color: rgba(0, 0, 0, 0.4);
-      padding: 20px;
-      font-size: 26px;
-      font-weight: bold;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-    }
-
-    main {
-      margin-top: 40px;
-    }
-
-    .card {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      width: 320px;
-      margin: 20px auto;
-      padding: 20px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-      transition: transform 0.2s;
-    }
-
-    .card:hover {
-      transform: scale(1.03);
-    }
-
-    .username {
-      font-size: 22px;
-      margin-bottom: 10px;
-      color: #ffecb3;
-    }
-
-    .balance {
-      font-size: 28px;
-      font-weight: bold;
-    }
-
-    .button {
-      background-color: #ff9800;
+      background: #4facfe;
       color: white;
+      padding: 15px 0;
+      font-size: 20px;
+    }
+    #content {
+      margin-top: 30px;
+    }
+    .card {
+      background: white;
+      margin: 0 auto;
+      padding: 20px;
+      width: 300px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #4facfe;
       border: none;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-size: 16px;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 5px;
       cursor: pointer;
-      margin-top: 15px;
+      margin-top: 10px;
     }
-
-    .button:hover {
-      background-color: #ffb74d;
-    }
-
-    footer {
-      margin-top: 40px;
-      font-size: 14px;
-      opacity: 0.8;
+    button:hover {
+      background: #00c3ff;
     }
   </style>
 </head>
 <body>
-  <header>💰 Ncoin Dashboard</header>
-  <main>
+  <header>
+    Ncoin Dashboard
+  </header>
+  <div id="content">
     <div class="card">
-      <div class="username" id="username">ようこそ！</div>
-      <div class="balance">残高: <span id="balance">--</span> Ncoin</div>
-      <button class="button" onclick="logout()">ログアウト</button>
+      <p>ようこそ、<span id="username"></span> さん！</p>
+      <p>現在の残高：<span id="balance"></span> Ncoin</p>
+      <hr>
+      <h3>送金</h3>
+      <input type="text" id="to" placeholder="送金先ユーザー">
+      <input type="number" id="amount" placeholder="金額">
+      <br>
+      <button onclick="sendMoney()">送金</button>
+      <br>
+      <button onclick="logout()">ログアウト</button>
     </div>
-  </main>
-  <footer>© 2025 Ncoin Network</footer>
+  </div>
 
-<script>
-  const username = localStorage.getItem("username");
-  if (!username) {
-    location.href = "/";
-  }
-
-  // デフォルト残高を1000に設定（初回のみ）
-  let balance = localStorage.getItem("balance");
-  if (!balance) {
-    balance = 1000;
-    localStorage.setItem("balance", balance);
-  }
-
-  document.getElementById("username").innerText = `${username} さん`;
-  document.getElementById("balance").innerText = balance;
-
-  function logout() {
-    localStorage.removeItem("username");
-    localStorage.removeItem("balance");
-    location.href = "/";
-  }
-
-  // 送金処理（サーバー接続済みの場合）
-  async function sendMoney() {
-    const to = document.getElementById("to").value;
-    const amount = parseInt(document.getElementById("amount").value);
-    if (!to || !amount) return alert("送金先と金額を入力してください。");
-
-    const res = await fetch("/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to, amount }),
-    });
-
-    const data = await res.json();
-    if (data.error) {
-      alert(data.error);
-    } else {
-      alert("送金完了！");
-      balance -= amount;
-      localStorage.setItem("balance", balance);
-      document.getElementById("balance").innerText = balance;
+  <script>
+    const username = localStorage.getItem("username");
+    if (!username) {
+      location.href = "/";
     }
-  }
-</script>
 
+    let balance = localStorage.getItem("balance");
+    if (!balance) {
+      balance = 1000;
+      localStorage.setItem("balance", balance);
+    }
+
+    document.getElementById("username").innerText = username;
+    document.getElementById("balance").innerText = balance;
+
+    function logout() {
+      localStorage.removeItem("username");
+      localStorage.removeItem("balance");
+      location.href = "/";
+    }
+
+    async function sendMoney() {
+      const to = document.getElementById("to").value.trim();
+      const amount = parseInt(document.getElementById("amount").value);
+      if (!to || !amount) {
+        alert("送金先と金額を入力してください。");
+        return;
+      }
+      if (amount <= 0) {
+        alert("金額は1以上である必要があります。");
+        return;
+      }
+
+      let current = parseInt(localStorage.getItem("balance"));
+      if (current < amount) {
+        alert("残高が足りません。");
+        return;
+      }
+
+      current -= amount;
+      localStorage.setItem("balance", current);
+      document.getElementById("balance").innerText = current;
+
+      alert(`送金完了: ${to} さんに ${amount} Ncoinを送信しました。`);
+    }
+  </script>
 </body>
 </html>
