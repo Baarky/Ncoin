@@ -2,73 +2,100 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Ncoin ダッシュボード</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ダッシュボード</title>
+  <style>
+    body {
+      background: linear-gradient(to bottom right, #1e3c72, #2a5298);
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: rgba(0, 0, 0, 0.4);
+      padding: 20px;
+      font-size: 26px;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    }
+
+    main {
+      margin-top: 40px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      width: 320px;
+      margin: 20px auto;
+      padding: 20px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s;
+    }
+
+    .card:hover {
+      transform: scale(1.03);
+    }
+
+    .username {
+      font-size: 22px;
+      margin-bottom: 10px;
+      color: #ffecb3;
+    }
+
+    .balance {
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .button {
+      background-color: #ff9800;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+
+    .button:hover {
+      background-color: #ffb74d;
+    }
+
+    footer {
+      margin-top: 40px;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>💰 Ncoin ダッシュボード</h1>
-    <p id="welcome"></p>
-
+  <header>💰 Ncoin Dashboard</header>
+  <main>
     <div class="card">
-      <h2>残高：<span id="balance">...</span> N</h2>
+      <div class="username" id="username">ようこそ！</div>
+      <div class="balance">残高: <span id="balance">--</span> Ncoin</div>
+      <button class="button" onclick="logout()">ログアウト</button>
     </div>
-
-    <div class="card">
-      <h3>送金</h3>
-      <input type="text" id="to" placeholder="送り先ニックネーム">
-      <input type="number" id="amount" placeholder="金額">
-      <button onclick="send()">送金</button>
-    </div>
-
-    <div class="card ranking">
-      <h3>🏆 ランキング</h3>
-      <ul id="rankingList"></ul>
-    </div>
-  </div>
+  </main>
+  <footer>© 2025 Ncoin Network</footer>
 
   <script>
-    async function loadData() {
-      const res = await fetch('/data');
-      const data = await res.json();
-      if (data.error) {
-        alert(data.error);
-        window.location.href = '/';
-        return;
-      }
-      document.getElementById('welcome').textContent = `こんにちは、${data.user}さん！`;
-      document.getElementById('balance').textContent = data.balance;
+    // ローカルストレージからユーザー名を取得
+    const username = localStorage.getItem("username");
+    const balance = localStorage.getItem("balance") || Math.floor(Math.random() * 1000);
 
-      const list = document.getElementById('rankingList');
-      list.innerHTML = '';
-      data.ranking.forEach((r, i) => {
-        const li = document.createElement('li');
-        li.textContent = `${i + 1}. ${r.name} - ${r.balance} N`;
-        list.appendChild(li);
-      });
+    document.getElementById("username").innerText = `${username} さん`;
+    document.getElementById("balance").innerText = balance;
+
+    function logout() {
+      localStorage.removeItem("username");
+      location.href = "/";
     }
-
-    async function send() {
-      const to = document.getElementById('to').value;
-      const amount = parseInt(document.getElementById('amount').value);
-      if (!to || !amount) return alert('送金先と金額を入力してください');
-
-      const res = await fetch('/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to, amount })
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        alert('送金完了！');
-        loadData();
-      } else {
-        alert(data.error || '送金に失敗しました');
-      }
-    }
-
-    loadData();
   </script>
 </body>
 </html>
