@@ -4,9 +4,6 @@ const session = require('express-session');
 const path = require('path');
 const app = express();
 
-// ポートは Railway の環境変数 PORT を使う
-const PORT = process.env.PORT || 3000;
-
 app.use(express.json());
 app.use(session({ secret: 'secret', resave: false, saveUninitialized: true }));
 
@@ -56,4 +53,5 @@ app.get('/ranking', (req, res) => {
   res.json(ranking);
 });
 
-app.listen(process.env.PORT || 3000, () => console.log("Server running"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
