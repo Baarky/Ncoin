@@ -84,18 +84,51 @@
   </main>
   <footer>© 2025 Ncoin Network</footer>
 
-  <script>
-    // ローカルストレージからユーザー名を取得
-    const username = localStorage.getItem("username");
-    const balance = localStorage.getItem("balance") || Math.floor(Math.random() * 1000);
+<script>
+  const username = localStorage.getItem("username");
+  if (!username) {
+    location.href = "/";
+  }
 
-    document.getElementById("username").innerText = `${username} さん`;
-    document.getElementById("balance").innerText = balance;
+  // デフォルト残高を1000に設定（初回のみ）
+  let balance = localStorage.getItem("balance");
+  if (!balance) {
+    balance = 1000;
+    localStorage.setItem("balance", balance);
+  }
 
-    function logout() {
-      localStorage.removeItem("username");
-      location.href = "/";
+  document.getElementById("username").innerText = `${username} さん`;
+  document.getElementById("balance").innerText = balance;
+
+  function logout() {
+    localStorage.removeItem("username");
+    localStorage.removeItem("balance");
+    location.href = "/";
+  }
+
+  // 送金処理（サーバー接続済みの場合）
+  async function sendMoney() {
+    const to = document.getElementById("to").value;
+    const amount = parseInt(document.getElementById("amount").value);
+    if (!to || !amount) return alert("送金先と金額を入力してください。");
+
+    const res = await fetch("/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to, amount }),
+    });
+
+    const data = await res.json();
+    if (data.error) {
+      alert(data.error);
+    } else {
+      alert("送金完了！");
+      balance -= amount;
+      localStorage.setItem("balance", balance);
+      document.getElementById("balance").innerText = balance;
     }
-  </script>
+  }
+</script>
+
 </body>
 </html>
