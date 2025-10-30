@@ -58,9 +58,36 @@ app.get('/ranking', (req, res) => {
   res.json(ranking);
 });
 
-// 画面表示
+// 画面表示（ルート）
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/index.html'));
 });
+
+// ダッシュボード画面
+app.get('/dashboard', (req, res) => {
+  if (!req.session.user) {
+    // ログインしていない場合はルートにリダイレクト
+    return res.redirect('/');
+  }
+  res.sendFile(path.join(__dirname, 'public/dashboard.html'));
+});
+
+// ログイン処理
+app.post('/login', (req, res) => {
+  const { nickname } = req.body;
+  let users = {};
+  if (fs.existsSync('users.json')) {
+    users = JSON.parse(fs.readFileSync('users.json'));
+  }
+  if (!users[nickname]) users[nickname] = { balance: 1000, history: [] };
+  fs.writeFileSync('users.json', JSON.stringify(users));
+  
+  // セッションにユーザーを保存
+  req.session.user = nickname;
+
+  // ログイン後は /dashboard にリダイレクト
+  res.json({ success: true, redirect: '/dashboard' });
+});
+
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
