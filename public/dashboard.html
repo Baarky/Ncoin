@@ -3,172 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <title>Ncoin Dashboard</title>
-<style>
-body {
-  font-family: sans-serif;
-  margin: 0;
-  background: #f0f2f5;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-header {
-  background: #4facfe;
-  color: white;
-  text-align: center;
-  padding: 15px 0;
-  font-size: 24px;
-}
-main {
-  display: flex;
-  flex: 1;
-  padding: 20px;
-  gap: 20px;
-}
-.card {
-  background: white;
-  border-radius: 10px;
-  padding: 15px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  flex: 1;
-  overflow-y: auto;
-}
-.card h3 {
-  margin-top: 0;
-}
-input {
-  padding: 8px;
-  margin: 5px 0;
-  width: calc(100% - 20px);
-  border-radius: 5px;
-  border: 1px solid #ccc;
-}
-button {
-  background: #4facfe;
-  border: none;
-  color: white;
-  padding: 10px 15px;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-top: 5px;
-}
-button:hover { background: #00c3ff; }
-ul { list-style: none; padding-left: 0; }
-li { padding: 5px 0; border-bottom: 1px solid #eee; }
-</style>
 </head>
 <body>
-
-<header>Ncoin Dashboard</header>
-
-<main>
-  <!-- 左：送金履歴 -->
-  <div class="card">
-    <h3>送金履歴</h3>
-    <ul id="historyList"></ul>
-  </div>
-
-  <!-- 中央：残高＆送金 -->
-  <div class="card">
-    <h3>ようこそ、<span id="username"></span> さん</h3>
-    <p>残高: <span id="balance"></span> Ncoin</p>
-    <hr>
-    <h3>送金</h3>
-    <input type="text" id="to" placeholder="送金先ユーザー">
-    <input type="number" id="amount" placeholder="金額">
-    <button onclick="sendMoney()">送金</button>
-    <button onclick="logout()">ログアウト</button>
-  </div>
-
-  <!-- 右：ランキング -->
-  <div class="card">
-    <h3>ランキング</h3>
-    <ul id="rankingList"></ul>
-  </div>
-</main>
+<h2 id="user"></h2>
+<p>残高: <span id="balance"></span> Ncoin</p>
+<button onclick="claimQuest()">クエスト報酬受け取り</button>
+<ul id="history"></ul>
 
 <script>
-const username = localStorage.getItem("username");
-if (!username) location.href = "/";
-
-// --- 全ユーザー情報をまとめて管理 ---
-let users = JSON.parse(localStorage.getItem("users")) || {};
-
-// 初回ログイン時は自分を登録
-if (!users[username]) {
-  users[username] = { balance: 1000, history: [] };
-  localStorage.setItem("users", JSON.stringify(users));
-}
-
-// 自分の情報を取得
-let user = users[username];
-
-// --- 画面更新 ---
-function renderDashboard() {
-  document.getElementById("username").innerText = username;
-  document.getElementById("balance").innerText = user.balance;
-
-  // 履歴表示
-  const historyList = document.getElementById("historyList");
-  historyList.innerHTML = "";
-  user.history.slice().reverse().forEach(h => {
-    const li = document.createElement("li");
-    li.textContent = `${h.date}: ${h.from} → ${h.to} ${h.amount} Ncoin`;
-    historyList.appendChild(li);
-  });
-
-  // ランキング表示
-  const rankingList = document.getElementById("rankingList");
-  rankingList.innerHTML = "";
-  const ranking = Object.entries(users)
-    .map(([name, data]) => ({ user: name, balance: data.balance }))
-    .sort((a,b) => b.balance - a.balance);
-  ranking.forEach(r => {
-    const li = document.createElement("li");
-    li.textContent = `${r.user}: ${r.balance} Ncoin`;
-    rankingList.appendChild(li);
+async function loadDashboard() {
+  const res = await fetch('/dashboard');
+  const data = await res.json();
+  if (!data.success) location.href = '/';
+  document.getElementById('user').innerText = 'ようこそ ' + (data.user ? 'ユーザー' : '');
+  document.getElementById('balance').innerText = data.user.balance;
+  const history = document.getElementById('history');
+  history.innerHTML = '';
+  data.user.history.forEach(h => {
+    const li = document.createElement('li');
+    li.textContent = `${h.date}: ${h.type} ${h.amount} Ncoin`;
+    history.appendChild(li);
   });
 }
 
-renderDashboard();
-
-// --- ログアウト ---
-function logout() {
-  localStorage.removeItem("username");
-  location.href = "/";
+async function claimQuest() {
+  const res = await fetch('/quest-reward', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ questId: 1, reward: 500 })
+  });
+  const data = await res.json();
+  alert(data.success ? `報酬 ${data.amount} Ncoin 取得！` : `失敗: ${data.reason}`);
+  loadDashboard();
 }
 
-// --- 送金処理 ---
-function sendMoney() {
-  const to = document.getElementById("to").value.trim();
-  const amount = parseInt(document.getElementById("amount").value);
-  if (!to || !amount) { alert("送金先と金額を入力してください"); return; }
-  if (amount <= 0) { alert("金額は1以上です"); return; }
-  if (user.balance < amount) { alert("残高が足りません"); return; }
-
-  // 送金先が未登録なら登録（初期残高1000）
-  if (!users[to]) users[to] = { balance: 1000, history: [] };
-
-  // 残高更新
-  user.balance -= amount;
-  users[to].balance += amount;
-
-  // 履歴追加（送信側）
-  const date = new Date().toLocaleString();
-  const record = { from: username, to, amount, date };
-  user.history.push(record);
-  users[to].history.push(record);
-
-  // 保存
-  users[username] = user;
-  localStorage.setItem("users", JSON.stringify(users));
-
-  // 画面更新
-  renderDashboard();
-
-  alert(`${to} に ${amount} Ncoin を送金しました`);
-}
+loadDashboard();
 </script>
-
 </body>
 </html>

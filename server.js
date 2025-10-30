@@ -1,82 +1,72 @@
 const express = require('express');
 const fs = require('fs');
-const session = require('express-session');
 const path = require('path');
+const session = require('express-session');
+
 const app = express();
-
 app.use(express.json());
-app.use(session({ secret: 'ncoin_secret', resave: false, saveUninitialized: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(session({ secret: 'secret', resave: false, saveUninitialized: true }));
 
-// ログイン
+// --- ユーザー管理 ---
+function loadUsers() {
+  if (!fs.existsSync('users.json')) fs.writeFileSync('users.json', '{}');
+  return JSON.parse(fs.readFileSync('users.json'));
+}
+function saveUsers(users) {
+  fs.writeFileSync('users.json', JSON.stringify(users, null, 2));
+}
+
+// --- ログイン ---
 app.post('/login', (req, res) => {
   const { nickname } = req.body;
-  if (!nickname) return res.status(400).json({ error: 'ニックネームを入力してください' });
-
-  let users = {};
-  if (fs.existsSync('users.json')) {
-    users = JSON.parse(fs.readFileSync('users.json'));
-  }
-
-  if (!users[nickname]) {
-    users[nickname] = { balance: 1000, history: [] };
-  }
-
-  fs.writeFileSync('users.json', JSON.stringify(users, null, 2));
+  let users = loadUsers();
+  if (!users[nickname]) users[nickname] = { balance: 1000, history: [], quests: [] };
   req.session.user = nickname;
+  saveUsers(users);
   res.json({ success: true });
 });
 
-// 認証チェック
-app.get('/session', (req, res) => {
-  if (req.session.user) {
-    res.json({ loggedIn: true, user: req.session.user });
+// --- クエスト報酬リクエスト ---
+app.post('/quest-reward', (req, res) => {
+  const username = req.session.user;
+  const { questId, reward } = req.body;
+
+  if (!username) return res.status(401).json({ success: false, reason: 'ログインしてください' });
+
+  let users = loadUsers();
+  let user = users[username];
+
+  // すでに報酬を受け取っていないかチェック
+  if (user.quests.includes(questId)) {
+    return res.json({ success: false, reason: 'すでに報酬取得済みです' });
+  }
+
+  // サーバー承認（簡易）
+  const approved = true; // ここで条件をチェック可能
+  if (approved) {
+    user.balance += reward;
+    user.history.push({ type: 'quest', questId, amount: reward, date: new Date().toISOString() });
+    user.quests.push(questId);
+    saveUsers(users);
+    return res.json({ success: true, amount: reward });
   } else {
-    res.json({ loggedIn: false });
+    return res.json({ success: false, reason: '承認されませんでした' });
   }
 });
 
-// 送金
-app.post('/send', (req, res) => {
-  const from = req.session.user;
-  const { to, amount } = req.body;
+// --- ダッシュボード情報取得 ---
+app.get('/dashboard', (req, res) => {
+  const username = req.session.user;
+  if (!username) return res.status(401).json({ success: false });
 
-  if (!from) return res.status(403).json({ error: 'ログインしてください' });
-  if (!to || !amount) return res.status(400).json({ error: '送金先と金額を入力してください' });
+  let users = loadUsers();
+  res.json({ user: users[username], ranking: Object.entries(users).sort((a,b)=>b[1].balance-a[1].balance) });
+});
 
-  let users = JSON.parse(fs.readFileSync('users.json'));
-  if (!users[to]) return res.status(400).json({ error: '送金先が存在しません' });
-  if (users[from].balance < amount) return res.status(400).json({ error: '残高不足' });
-
-  users[from].balance -= amount;
-  users[to].balance += parseInt(amount);
-  const date = new Date().toLocaleString();
-  users[from].history.push({ to, amount, date });
-  users[to].history.push({ from, amount, date });
-
-  fs.writeFileSync('users.json', JSON.stringify(users, null, 2));
+// --- ログアウト ---
+app.post('/logout', (req, res) => {
+  req.session.destroy();
   res.json({ success: true });
 });
 
-// 残高・ランキング取得
-app.get('/data', (req, res) => {
-  if (!req.session.user) return res.status(403).json({ error: 'ログインしてください' });
-  const users = JSON.parse(fs.readFileSync('users.json'));
-  const ranking = Object.entries(users)
-    .sort((a, b) => b[1].balance - a[1].balance)
-    .map(([name, data]) => ({ name, balance: data.balance }));
-
-  res.json({
-    user: req.session.user,
-    balance: users[req.session.user].balance,
-    ranking
-  });
-});
-app.get('/dashboard', (req, res) => {
-  res.sendFile(__dirname + '/public/dashboard.html');
-});
-
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.listen(3000, () => console.log('Server running on http://localhost:3000'));
