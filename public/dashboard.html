@@ -2,24 +2,73 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ダッシュボード - Ncoin</title>
+  <title>Ncoin ダッシュボード</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>ようこそ、<span id="userName"></span></h1>
-  <p>所持金: <span id="balance"></span> Ncoin</p>
+  <div class="container">
+    <h1>💰 Ncoin ダッシュボード</h1>
+    <p id="welcome"></p>
 
-  <h2>送金</h2>
-  <input type="text" id="sendTo" placeholder="送金先">
-  <input type="number" id="sendAmount" placeholder="金額">
-  <button id="sendBtn">送金</button>
+    <div class="card">
+      <h2>残高：<span id="balance">...</span> N</h2>
+    </div>
 
-  <h2>ランキング</h2>
-  <ol id="ranking"></ol>
+    <div class="card">
+      <h3>送金</h3>
+      <input type="text" id="to" placeholder="送り先ニックネーム">
+      <input type="number" id="amount" placeholder="金額">
+      <button onclick="send()">送金</button>
+    </div>
 
-  <h2>履歴</h2>
-  <ul id="history"></ul>
+    <div class="card ranking">
+      <h3>🏆 ランキング</h3>
+      <ul id="rankingList"></ul>
+    </div>
+  </div>
 
-  <script src="main.js"></script>
+  <script>
+    async function loadData() {
+      const res = await fetch('/data');
+      const data = await res.json();
+      if (data.error) {
+        alert(data.error);
+        window.location.href = '/';
+        return;
+      }
+      document.getElementById('welcome').textContent = `こんにちは、${data.user}さん！`;
+      document.getElementById('balance').textContent = data.balance;
+
+      const list = document.getElementById('rankingList');
+      list.innerHTML = '';
+      data.ranking.forEach((r, i) => {
+        const li = document.createElement('li');
+        li.textContent = `${i + 1}. ${r.name} - ${r.balance} N`;
+        list.appendChild(li);
+      });
+    }
+
+    async function send() {
+      const to = document.getElementById('to').value;
+      const amount = parseInt(document.getElementById('amount').value);
+      if (!to || !amount) return alert('送金先と金額を入力してください');
+
+      const res = await fetch('/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, amount })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        alert('送金完了！');
+        loadData();
+      } else {
+        alert(data.error || '送金に失敗しました');
+      }
+    }
+
+    loadData();
+  </script>
 </body>
 </html>

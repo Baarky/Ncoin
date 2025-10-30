@@ -1,20 +1,36 @@
-<script>
-async function login() {
-  const nickname = document.getElementById('nickname').value;
-  const res = await fetch('/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nickname })
-  });
-  const data = await res.json();
-  if (data.success) {
-    // ログイン成功後に /dashboard へ
-    window.location.href = data.redirect;
-  } else {
-    alert('ログイン失敗');
-  }
-}
-</script>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Ncoin ログイン</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Ncoin</h1>
+    <p>ニックネームを入力してください</p>
+    <input type="text" id="nickname" placeholder="例: Rei">
+    <button onclick="login()">ログイン</button>
+  </div>
 
-<input type="text" id="nickname" placeholder="ニックネーム">
-<button onclick="login()">ログイン</button>
+  <script>
+    async function login() {
+      const nickname = document.getElementById('nickname').value.trim();
+      if (!nickname) return alert('ニックネームを入力してください');
+
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        window.location.href = '/dashboard';
+      } else {
+        alert(data.error || 'ログイン失敗');
+      }
+    }
+  </script>
+</body>
+</html>
