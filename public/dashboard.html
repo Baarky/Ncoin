@@ -49,6 +49,8 @@
 
   // QRコード生成
   (async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const from = urlParams.get("from");
     const qrUrl = `${location.origin}/pay.html?from=${encodeURIComponent(nickname)}`;
     const qrDataUrl = await QRCode.toDataURL(qrUrl);
     document.getElementById("qrImage").src = qrDataUrl;
