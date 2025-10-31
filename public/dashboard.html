@@ -6,12 +6,6 @@
 </head>
 <body>
   <h1 id="welcome"></h1>
-<h2>送金QRコード生成</h2>
-<input type="text" id="qrTo" placeholder="送金先">
-<input type="number" id="qrAmount" placeholder="金額">
-<button id="generateQR">QR生成</button>
-<br>
-<img id="qrImage" alt="QRコード" style="margin-top:10px;">
   <!-- 残高 -->
   <h2>残高: <span id="balance">0</span> コイン</h2>
 
@@ -35,22 +29,18 @@
   <ul id="historyList"></ul>
 
   <script>
-document.getElementById("generateQR").addEventListener("click", async () => {
-  const to = document.getElementById("qrTo").value;
-  if (!to) return alert("送金先を入力");
-
-  // QRに飛ばすURL: /pay.html?from=送金元&to=送金先
-  const url = `${location.origin}/pay.html?from=${encodeURIComponent(nickname)}&to=${encodeURIComponent(to)}`;
-  
-  const qrDataUrl = await QRCode.toDataURL(url);
-  document.getElementById("qrImage").src = qrDataUrl;
-});
-
     let nickname = localStorage.getItem("nickname");
     if (!nickname) {
       alert("ログイン情報がありません");
       location.href = "/login.html";
     }
+  // 自動でQR生成
+  (async () => {
+    // QRには送金元ニックネームのみ埋め込む
+    const qrUrl = `${location.origin}/pay.html?from=${encodeURIComponent(nickname)}`;
+    const qrDataUrl = await QRCode.toDataURL(qrUrl);
+    document.getElementById("qrImage").src = qrDataUrl;
+  })();
     document.getElementById("welcome").textContent = `ようこそ ${nickname} さん`;
 
     const balanceEl = document.getElementById("balance");

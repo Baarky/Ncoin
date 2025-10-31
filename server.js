@@ -120,12 +120,12 @@ app.post("/generate-qr", async (req, res) => {
   }
 });
 
-// QRコード読み取り後の送金承認
 app.post("/pay-qr", (req, res) => {
   const { from, to, amount } = req.body;
   const db = JSON.parse(fs.readFileSync("users.json", "utf8"));
 
-  if (!db[from] || !db[to]) return res.status(404).json({ error: "ユーザー不在" });
+  if (!db[from]) return res.status(404).json({ error: "送金元が存在しません" });
+  if (!db[to]) return res.status(404).json({ error: "送金先が存在しません" });
   if (db[from].balance < amount) return res.status(400).json({ error: "残高不足" });
 
   db[from].balance -= amount;
@@ -138,6 +138,7 @@ app.post("/pay-qr", (req, res) => {
   fs.writeFileSync("users.json", JSON.stringify(db, null, 2));
   res.json({ success: true });
 });
+
 
 const PORT = process.env.PORT || 3000; // ←これで OK
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
