@@ -9,9 +9,9 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "dotenv": "^17.2.3",
     "express": "^4.21.2",
-    "express-session": "^1.17.3",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.0",
+    "dotenv": "^16.3.1"
   }
+
 }
