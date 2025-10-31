@@ -6,20 +6,27 @@
 </head>
 <body>
   <h1 id="welcome"></h1>
+
+  <!-- 残高 -->
   <h2>残高: <span id="balance">0</span> コイン</h2>
 
+  <!-- クエスト報酬 -->
   <h2>クエスト報酬</h2>
   <input type="number" id="questAmount" placeholder="獲得コイン">
   <button id="questBtn">報酬を獲得</button>
-  <h2>送金</h2>
-  <input type="text" id="sendTo" placeholder="送金先ニックネーム">
-  <input type="number" id="sendAmount" placeholder="送金額">
-  <button id="sendBtn">送金する</button>
 
+  <!-- 送金 -->
+  <h2>送金</h2>
+  <input type="text" id="sendTo" placeholder="送金先">
+  <input type="number" id="sendAmount" placeholder="金額">
+  <button id="sendBtn">送金</button>
+
+  <!-- ランキング -->
   <h2>ランキング</h2>
   <ol id="rankingList"></ol>
 
-  <h2>送金履歴 / クエスト履歴</h2>
+  <!-- 履歴 -->
+  <h2>送金 / クエスト履歴</h2>
   <ul id="historyList"></ul>
 
   <script>
@@ -28,33 +35,56 @@
       alert("ログイン情報がありません");
       location.href = "/login.html";
     }
-
     document.getElementById("welcome").textContent = `ようこそ ${nickname} さん`;
 
     const balanceEl = document.getElementById("balance");
     const rankingEl = document.getElementById("rankingList");
     const historyEl = document.getElementById("historyList");
 
+    // --- 残高取得 ---
     async function fetchBalance() {
       const res = await fetch(`/balance/${nickname}`);
       const data = await res.json();
       balanceEl.textContent = data.balance;
     }
 
+    // --- クエスト報酬 ---
     document.getElementById("questBtn").addEventListener("click", async () => {
       const amount = Number(document.getElementById("questAmount").value);
-      if (!amount) return;
+      if (!amount) return alert("金額を入力してください");
+
       const res = await fetch("/quest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nickname, amount })
       });
+
       const data = await res.json();
-      balanceEl.textContent = data.balance;
+      if (data.error) alert(data.error);
+      fetchBalance();
       fetchHistory();
       fetchRanking();
     });
 
+    // --- 送金 ---
+    document.getElementById("sendBtn").addEventListener("click", async () => {
+      const to = document.getElementById("sendTo").value;
+      const amount = Number(document.getElementById("sendAmount").value);
+      if (!to || !amount) return alert("送金先と金額を入力してください");
+
+      const res = await fetch("/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from: nickname, to, amount })
+      });
+      const data = await res.json();
+      if (data.error) alert(data.error);
+      fetchBalance();
+      fetchHistory();
+      fetchRanking();
+    });
+
+    // --- ランキング取得 ---
     async function fetchRanking() {
       const res = await fetch("/ranking");
       const ranking = await res.json();
@@ -66,6 +96,7 @@
       });
     }
 
+    // --- 履歴取得 ---
     async function fetchHistory() {
       const res = await fetch(`/history/${nickname}`);
       const history = await res.json();
@@ -74,28 +105,17 @@
         const li = document.createElement("li");
         let text = `[${h.date.split("T")[0]}] `;
         if (h.type === "クエスト報酬") text += `クエスト報酬: +${h.amount}`;
+        else if (h.type === "送金") text += `送金: -${h.amount} → ${h.to}`;
+        else if (h.type === "受取") text += `受取: +${h.amount} ← ${h.from}`;
         li.textContent = text;
         historyEl.appendChild(li);
       });
     }
 
+    // --- 初回ロード ---
     fetchBalance();
     fetchRanking();
     fetchHistory();
   </script>
-  <script src="/socket.io/socket.io.js"></script>
-<script>
-const socket = io();
-
-// 既存の fetchBalance, fetchRanking, fetchHistory を使用
-
-// WebSocketで他ユーザの更新を反映
-socket.on("update", ({ nickname: updatedUser, db }) => {
-  fetchBalance();  // 自分の残高を再取得
-  fetchRanking();
-  fetchHistory();
-});
-</script>
-
 </body>
 </html>

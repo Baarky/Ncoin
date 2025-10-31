@@ -6,8 +6,6 @@ require("dotenv").config();
 const app = express();
 const server = require("http").createServer(app);
 const io = require("socket.io")(server);
-
-const PORT = process.env.PORT || 3000;
 const ACCESS_CODE = process.env.ACCESS_CODE;
 
 app.use(express.urlencoded({ extended: true }));
@@ -65,25 +63,25 @@ app.post("/quest", (req, res) => {
   res.json({ balance: db[nickname].balance });
 });
 
-// --- 送金 ---
 app.post("/send", (req, res) => {
   const { from, to, amount } = req.body;
-  const db = loadDB();
+  const db = JSON.parse(fs.readFileSync("users.json", "utf8"));
 
-  if (!db[from] || !db[to]) return res.status(404).json({ error: "ユーザーが存在しません" });
+  if (!db[from] || !db[to]) return res.status(400).json({ error: "ユーザーが存在しません" });
   if (db[from].balance < amount) return res.status(400).json({ error: "残高不足" });
 
   db[from].balance -= amount;
   db[to].balance += amount;
 
+  // 履歴を追加
   const date = new Date().toISOString();
   db[from].history.push({ type: "送金", to, amount, date });
   db[to].history.push({ type: "受取", from, amount, date });
 
-  saveDB(db);
-  io.emit("update", { nickname: null, db }); // 全クライアントに通知
+  fs.writeFileSync("users.json", JSON.stringify(db, null, 2));
   res.json({ success: true, balance: db[from].balance });
 });
+
 
 // --- ランキング ---
 app.get("/ranking", (req, res) => {
@@ -107,4 +105,5 @@ io.on("connection", (socket) => {
   console.log("A user connected");
 });
 
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = process.env.PORT || 3000; // ←これで OK
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
