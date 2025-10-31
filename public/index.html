@@ -1,65 +1,14 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>ログイン - Ncoin</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      background: linear-gradient(135deg, #4facfe, #00f2fe);
-      color: white;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-    input {
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: none;
-      width: 200px;
-    }
-    button {
-      margin-top: 10px;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 5px;
-      background: #fff;
-      color: #333;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #f0f0f0;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <title>アクセス認証</title>
 </head>
 <body>
-  <h1>ニックネーム認証</h1>
-  <input type="text" id="nickname" placeholder="ニックネームを入力">
-  <br>
-  <button onclick="login()">ログイン</button>
-
-  <script>
-    function login() {
-      const nickname = document.getElementById("nickname").value.trim();
-      if (!nickname) {
-        alert("ニックネームを入力してください。");
-        return;
-      }
-
-      // ニックネームを保存
-      localStorage.setItem("username", nickname);
-
-      // 残高が未設定なら1000をセット
-      if (!localStorage.getItem("balance")) {
-        localStorage.setItem("balance", 1000);
-      }
-
-      // ダッシュボードへ移動
-      location.href = "/dashboard.html";
-    }
-  </script>
+  <h2>アクセスコードを入力してください</h2>
+  <form method="POST" action="/auth">
+    <input type="password" name="code" placeholder="アクセスコード" required>
+    <button type="submit">送信</button>
+  </form>
 </body>
 </html>

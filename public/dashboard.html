@@ -1,174 +1,81 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>Ncoin Dashboard</title>
-<style>
-body {
-  font-family: sans-serif;
-  margin: 0;
-  background: #f0f2f5;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-header {
-  background: #4facfe;
-  color: white;
-  text-align: center;
-  padding: 15px 0;
-  font-size: 24px;
-}
-main {
-  display: flex;
-  flex: 1;
-  padding: 20px;
-  gap: 20px;
-}
-.card {
-  background: white;
-  border-radius: 10px;
-  padding: 15px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  flex: 1;
-  overflow-y: auto;
-}
-.card h3 {
-  margin-top: 0;
-}
-input {
-  padding: 8px;
-  margin: 5px 0;
-  width: calc(100% - 20px);
-  border-radius: 5px;
-  border: 1px solid #ccc;
-}
-button {
-  background: #4facfe;
-  border: none;
-  color: white;
-  padding: 10px 15px;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-top: 5px;
-}
-button:hover { background: #00c3ff; }
-ul { list-style: none; padding-left: 0; }
-li { padding: 5px 0; border-bottom: 1px solid #eee; }
-</style>
+  <meta charset="UTF-8">
+  <title>マイページ</title>
 </head>
 <body>
-
-<header>Ncoin Dashboard</header>
-
-<main>
-  <!-- 左：送金履歴 -->
-  <div class="card">
-    <h3>送金履歴</h3>
-    <ul id="historyList"></ul>
-  </div>
-
-  <!-- 中央：残高＆送金 -->
-  <div class="card">
-    <h3>ようこそ、<span id="username"></span> さん</h3>
-    <p>残高: <span id="balance"></span> Ncoin</p>
-    <hr>
-    <h3>送金</h3>
-    <input type="text" id="to" placeholder="送金先ユーザー">
-    <input type="number" id="amount" placeholder="金額">
-    <button onclick="sendMoney()">送金</button>
+  <div>
+    <span id="user"></span> | 
     <button onclick="logout()">ログアウト</button>
   </div>
 
-  <!-- 右：ランキング -->
-  <div class="card">
-    <h3>ランキング</h3>
-    <ul id="rankingList"></ul>
-  </div>
-</main>
+  <h2>所持金: <span id="balance"></span> コイン</h2>
+  <button onclick="sendCoin()">クエスト報酬 +100</button>
 
-<script>
-const username = localStorage.getItem("username");
-if (!username) location.href = "/";
+  <hr>
 
-// --- 全ユーザー情報をまとめて管理 ---
-let users = JSON.parse(localStorage.getItem("users")) || {};
+  <h3>ランキング</h3>
+  <ul id="ranking"></ul>
 
-// 初回ログイン時は自分を登録
-if (!users[username]) {
-  users[username] = { balance: 1000, history: [] };
-  localStorage.setItem("users", JSON.stringify(users));
-}
+  <h3>送金履歴</h3>
+  <ul id="history"></ul>
 
-// 自分の情報を取得
-let user = users[username];
+  <script>
+    const user = localStorage.getItem("nickname");
+    if (!user) location.href = "/login";
 
-// --- 画面更新 ---
-function renderDashboard() {
-  document.getElementById("username").innerText = username;
-  document.getElementById("balance").innerText = user.balance;
+    const balanceElem = document.getElementById("balance");
+    const rankingElem = document.getElementById("ranking");
+    const historyElem = document.getElementById("history");
 
-  // 履歴表示（自分が関わった取引のみ）
-  const historyList = document.getElementById("historyList");
-  historyList.innerHTML = "";
-  user.history.slice().reverse().forEach(h => {
-    const li = document.createElement("li");
-    li.textContent = `${h.date}: ${h.from} → ${h.to} ${h.amount} Ncoin`;
-    historyList.appendChild(li);
-  });
+    document.getElementById("user").textContent = user;
+    balanceElem.textContent = localStorage.getItem("balance");
 
-  // ランキング表示
-  const rankingList = document.getElementById("rankingList");
-  rankingList.innerHTML = "";
-  const ranking = Object.entries(users)
-    .map(([name, data]) => ({ user: name, balance: data.balance }))
-    .sort((a,b) => b.balance - a.balance);
-  ranking.forEach(r => {
-    const li = document.createElement("li");
-    li.textContent = `${r.user}: ${r.balance} Ncoin`;
-    rankingList.appendChild(li);
-  });
-}
+    // 初期化された履歴がなければ作成
+    if (!localStorage.getItem("history")) localStorage.setItem("history", JSON.stringify([]));
 
-renderDashboard();
+    function sendCoin() {
+      let bal = parseInt(localStorage.getItem("balance")) || 0;
+      bal += 100;
+      localStorage.setItem("balance", bal);
+      balanceElem.textContent = bal;
 
-// --- ログアウト ---
-function logout() {
-  localStorage.removeItem("username");
-  location.href = "/";
-}
+      // 履歴に追加
+      const history = JSON.parse(localStorage.getItem("history"));
+      const now = new Date().toLocaleString();
+      history.push({ type: "クエスト報酬", amount: 100, date: now });
+      localStorage.setItem("history", JSON.stringify(history));
 
-// --- 送金処理 ---
-function sendMoney() {
-  const to = document.getElementById("to").value.trim();
-  const amount = parseInt(document.getElementById("amount").value);
-  if (!to || !amount) { alert("送金先と金額を入力してください"); return; }
-  if (amount <= 0) { alert("金額は1以上です"); return; }
-  if (user.balance < amount) { alert("残高が足りません"); return; }
+      alert("クエスト達成！+100コイン");
+      updateHistory();
+      updateRanking();
+    }
 
-  // 送金先が未登録なら登録（初期残高1000）
-  if (!users[to]) users[to] = { balance: 1000, history: [] };
+    function logout() {
+      localStorage.clear();
+      window.location.href = "/";
+    }
 
-  // 残高更新
-  user.balance -= amount;
-  users[to].balance += amount;
+    function updateHistory() {
+      const history = JSON.parse(localStorage.getItem("history"));
+      historyElem.innerHTML = "";
+      history.forEach(h => {
+        const li = document.createElement("li");
+        li.textContent = `${h.date} : ${h.type} ${h.amount}コイン`;
+        historyElem.appendChild(li);
+      });
+    }
 
-  // 履歴追加（送信側・受信側両方）
-  const date = new Date().toLocaleString();
-  const record = { from: username, to, amount, date };
-  user.history.push(record);
-  users[to].history.push(record);
+    function updateRanking() {
+      // ローカルストレージ上の簡易ランキング（自分だけなので自分表示）
+      const bal = parseInt(localStorage.getItem("balance")) || 0;
+      rankingElem.innerHTML = `<li>${user} : ${bal}コイン</li>`;
+    }
 
-  // 保存
-  users[username] = user;
-  localStorage.setItem("users", JSON.stringify(users));
-
-  // 画面更新
-  renderDashboard();
-
-  alert(`${to} に ${amount} Ncoin を送金しました`);
-}
-</script>
-
+    // 初回表示
+    updateHistory();
+    updateRanking();
+  </script>
 </body>
 </html>

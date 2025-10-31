@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ログイン</title>
+</head>
+<body>
+  <h2>ニックネームを入力してください</h2>
+  <input type="text" id="nickname" placeholder="例: Rei" required>
+  <button onclick="login()">ログイン</button>
+
+  <script>
+    function login() {
+      const name = document.getElementById("nickname").value.trim();
+      if (!name) return alert("ニックネームを入力してください");
+      localStorage.setItem("nickname", name);
+      localStorage.setItem("balance", 1000);
+      window.location.href = "/dashboard";
+    }
+  </script>
+</body>
+</html>
