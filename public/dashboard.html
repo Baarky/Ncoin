@@ -35,19 +35,17 @@
   <ul id="historyList"></ul>
 
   <script>
-  document.getElementById("generateQR").addEventListener("click", async () => {
+document.getElementById("generateQR").addEventListener("click", async () => {
   const to = document.getElementById("qrTo").value;
-  const amount = Number(document.getElementById("qrAmount").value);
-  if (!to || !amount) return alert("送金先と金額を入力");
+  if (!to) return alert("送金先を入力");
 
-  const res = await fetch("/generate-qr", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ from: nickname, to, amount })
-  });
-  const data = await res.json();
-  if (data.qr) document.getElementById("qrImage").src = data.qr;
+  // QRに飛ばすURL: /pay.html?from=送金元&to=送金先
+  const url = `${location.origin}/pay.html?from=${encodeURIComponent(nickname)}&to=${encodeURIComponent(to)}`;
+  
+  const qrDataUrl = await QRCode.toDataURL(url);
+  document.getElementById("qrImage").src = qrDataUrl;
 });
+
     let nickname = localStorage.getItem("nickname");
     if (!nickname) {
       alert("ログイン情報がありません");

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>送金承認</title>
+</head>
+<body>
+  <h1>送金承認ページ</h1>
+  <p id="info"></p>
+
+  <input type="number" id="amount" placeholder="送金額">
+  <button id="sendBtn">送金</button>
+
+  <script>
+    // URLクエリから送金情報取得
+    const params = new URLSearchParams(window.location.search);
+    const from = params.get("from");
+    const to = params.get("to");
+    const nickname = localStorage.getItem("nickname");
+
+    if (!nickname) {
+      alert("ログイン情報がありません");
+      location.href = "/login.html";
+    }
+
+    document.getElementById("info").textContent = `送金元: ${from}, あなた: ${nickname}`;
+
+    document.getElementById("sendBtn").addEventListener("click", async () => {
+      const amount = Number(document.getElementById("amount").value);
+      if (!amount) return alert("金額を入力");
+
+      const res = await fetch("/pay-qr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from, to: nickname, amount })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("送金成功");
+        location.href = "/dashboard";
+      } else {
+        alert("送金失敗: " + data.error);
+      }
+    });
+  </script>
+</body>
+</html>
