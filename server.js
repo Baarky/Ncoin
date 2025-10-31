@@ -104,6 +104,40 @@ app.get("/history/:nickname", (req, res) => {
 io.on("connection", (socket) => {
   console.log("A user connected");
 });
+const QRCode = require("qrcode");
+
+// QRコード生成
+app.post("/generate-qr", async (req, res) => {
+  const { from, to, amount } = req.body;
+  if (!from || !to || !amount) return res.status(400).json({ error: "不足情報" });
+
+  const payload = JSON.stringify({ from, to, amount });
+  try {
+    const qr = await QRCode.toDataURL(payload); // base64画像
+    res.json({ qr });
+  } catch (err) {
+    res.status(500).json({ error: "QR生成失敗" });
+  }
+});
+
+// QRコード読み取り後の送金承認
+app.post("/pay-qr", (req, res) => {
+  const { from, to, amount } = req.body;
+  const db = JSON.parse(fs.readFileSync("users.json", "utf8"));
+
+  if (!db[from] || !db[to]) return res.status(404).json({ error: "ユーザー不在" });
+  if (db[from].balance < amount) return res.status(400).json({ error: "残高不足" });
+
+  db[from].balance -= amount;
+  db[to].balance += amount;
+
+  const date = new Date().toISOString();
+  db[from].history.push({ type: "送金", to, amount, date });
+  db[to].history.push({ type: "受取", from, amount, date });
+
+  fs.writeFileSync("users.json", JSON.stringify(db, null, 2));
+  res.json({ success: true });
+});
 
 const PORT = process.env.PORT || 3000; // ←これで OK
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -6,7 +6,12 @@
 </head>
 <body>
   <h1 id="welcome"></h1>
-
+<h2>送金QRコード生成</h2>
+<input type="text" id="qrTo" placeholder="送金先">
+<input type="number" id="qrAmount" placeholder="金額">
+<button id="generateQR">QR生成</button>
+<br>
+<img id="qrImage" alt="QRコード" style="margin-top:10px;">
   <!-- 残高 -->
   <h2>残高: <span id="balance">0</span> コイン</h2>
 
@@ -30,6 +35,19 @@
   <ul id="historyList"></ul>
 
   <script>
+  document.getElementById("generateQR").addEventListener("click", async () => {
+  const to = document.getElementById("qrTo").value;
+  const amount = Number(document.getElementById("qrAmount").value);
+  if (!to || !amount) return alert("送金先と金額を入力");
+
+  const res = await fetch("/generate-qr", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ from: nickname, to, amount })
+  });
+  const data = await res.json();
+  if (data.qr) document.getElementById("qrImage").src = data.qr;
+});
     let nickname = localStorage.getItem("nickname");
     if (!nickname) {
       alert("ログイン情報がありません");
