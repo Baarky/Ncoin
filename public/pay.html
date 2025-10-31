@@ -1,36 +1,61 @@
-<h1>送金承認ページ</h1>
-<p id="info"></p>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>QR送金</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
+</head>
+<body>
+  <h1>QRコードで送金</h1>
+  
+  <!-- カメラプレビュー -->
+  <div id="reader" style="width:300px;"></div>
 
-<input type="number" id="amount" placeholder="送金額">
-<button id="sendBtn">送金</button>
+  <h3>送金先: <span id="recipient"></span></h3>
+  <input type="number" id="amount" placeholder="送金額">
+  <button id="sendBtn">送金</button>
 
-<script>
-  const params = new URLSearchParams(window.location.search);
-  const from = params.get("from"); // QRから送金元を取得
-  const to = localStorage.getItem("nickname"); // QRを読む人が送金先
-
-  if (!to) {
-    alert("ログイン情報がありません");
-    location.href = "/login.html";
-  }
-
-  document.getElementById("info").textContent = `送金元: ${from}, あなた: ${to}`;
-
-  document.getElementById("sendBtn").addEventListener("click", async () => {
-    const amount = Number(document.getElementById("amount").value);
-    if (!amount) return alert("金額を入力");
-
-    const res = await fetch("/pay-qr", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to, amount })
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert("送金成功");
-      location.href = "/dashboard";
-    } else {
-      alert("送金失敗: " + data.error);
+  <script>
+    const nickname = localStorage.getItem("nickname");
+    if (!nickname) {
+      alert("ログイン情報がありません");
+      location.href = "/login.html";
     }
-  });
-</script>
+
+    let recipientNickname = "";
+
+    // QRコード読み取り
+    const html5QrCode = new Html5Qrcode("reader");
+    Html5Qrcode.getCameras().then(devices => {
+      if (devices && devices.length) {
+        html5QrCode.start(
+          { facingMode: "environment" }, 
+          { fps: 10, qrbox: 250 },
+          (decodedText) => {
+            // QRに送金先ニックネームが入っている想定
+            recipientNickname = decodedText;
+            document.getElementById("recipient").textContent = recipientNickname;
+            html5QrCode.stop();
+          }
+        );
+      }
+    }).catch(err => console.error(err));
+
+    // 送金
+    document.getElementById("sendBtn").addEventListener("click", async () => {
+      const amount = Number(document.getElementById("amount").value);
+      if (!recipientNickname) return alert("QRを読み取ってください");
+      if (!amount) return alert("送金額を入力してください");
+
+      const res = await fetch("/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from: nickname, to: recipientNickname, amount })
+      });
+      const data = await res.json();
+      if (data.error) alert(data.error);
+      else alert(`送金成功! 残高: ${data.balance}`);
+    });
+  </script>
+</body>
+</html>
