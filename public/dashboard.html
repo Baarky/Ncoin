@@ -83,5 +83,19 @@
     fetchRanking();
     fetchHistory();
   </script>
+  <script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+// 既存の fetchBalance, fetchRanking, fetchHistory を使用
+
+// WebSocketで他ユーザの更新を反映
+socket.on("update", ({ nickname: updatedUser, db }) => {
+  fetchBalance();  // 自分の残高を再取得
+  fetchRanking();
+  fetchHistory();
+});
+</script>
+
 </body>
 </html>

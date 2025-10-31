@@ -4,23 +4,21 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
+const server = require("http").createServer(app);
+const io = require("socket.io")(server);
+
 const PORT = process.env.PORT || 3000;
-const ACCESS_CODE = process.env.ACCESS_CODE || "12345";
+const ACCESS_CODE = process.env.ACCESS_CODE;
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static("public"));
 
-// DB読み書き関数
+// --- DB ヘルパー ---
 function loadDB() {
-  try {
-    const data = fs.readFileSync("users.json", "utf8");
-    return data ? JSON.parse(data) : {};
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(fs.readFileSync("users.json", "utf8")); }
+  catch { return {}; }
 }
-
 function saveDB(db) {
   fs.writeFileSync("users.json", JSON.stringify(db, null, 2));
 }
@@ -43,10 +41,7 @@ app.post("/login", (req, res) => {
   res.json({ success: true, nickname });
 });
 
-// --- ダッシュボード ---
-app.get("/dashboard", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/dashboard.html"));
-});
+app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "public/dashboard.html")));
 
 // --- 残高取得 ---
 app.get("/balance/:nickname", (req, res) => {
@@ -61,10 +56,33 @@ app.post("/quest", (req, res) => {
   const { nickname, amount } = req.body;
   const db = loadDB();
   if (!db[nickname]) return res.status(404).json({ error: "ユーザーが存在しません" });
+
   db[nickname].balance += amount;
   db[nickname].history.push({ type: "クエスト報酬", amount, date: new Date().toISOString() });
   saveDB(db);
+
+  io.emit("update", { nickname, db }); // 全クライアントに通知
   res.json({ balance: db[nickname].balance });
+});
+
+// --- 送金 ---
+app.post("/send", (req, res) => {
+  const { from, to, amount } = req.body;
+  const db = loadDB();
+
+  if (!db[from] || !db[to]) return res.status(404).json({ error: "ユーザーが存在しません" });
+  if (db[from].balance < amount) return res.status(400).json({ error: "残高不足" });
+
+  db[from].balance -= amount;
+  db[to].balance += amount;
+
+  const date = new Date().toISOString();
+  db[from].history.push({ type: "送金", to, amount, date });
+  db[to].history.push({ type: "受取", from, amount, date });
+
+  saveDB(db);
+  io.emit("update", { nickname: null, db }); // 全クライアントに通知
+  res.json({ success: true, balance: db[from].balance });
 });
 
 // --- ランキング ---
@@ -83,24 +101,10 @@ app.get("/history/:nickname", (req, res) => {
   if (!user) return res.status(404).json({ error: "ユーザーが存在しません" });
   res.json(user.history);
 });
-// --- 送金 ---
-app.post("/send", (req, res) => {
-  const { from, to, amount } = req.body;
-  const db = loadDB();
 
-  if (!db[from]) return res.status(404).json({ error: "送金元ユーザーが存在しません" });
-  if (!db[to]) return res.status(404).json({ error: "送金先ユーザーが存在しません" });
-  if (db[from].balance < amount) return res.status(400).json({ error: "残高不足" });
-
-  db[from].balance -= amount;
-  db[to].balance += amount;
-
-  const date = new Date().toISOString();
-  db[from].history.push({ type: "送金", to, amount, date });
-  db[to].history.push({ type: "受取", from, amount, date });
-
-  saveDB(db);
-  res.json({ success: true, balance: db[from].balance });
+// --- Socket.io 接続 ---
+io.on("connection", (socket) => {
+  console.log("A user connected");
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

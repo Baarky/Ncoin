@@ -1,5 +1,6 @@
 {
-  "nickname": "ユーザー名", "amount": 1000,
+  "nickname": "ユーザー名",
+  "amount": 1000,
   "name": "ncoin",
   "version": "1.0.0",
   "description": "Ncoin app for Railway",
@@ -10,6 +11,7 @@
   "dependencies": {
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
-    "express-session": "^1.17.3"
+    "express-session": "^1.17.3",
+    "socket.io": "^4.8.1"
   }
 }
