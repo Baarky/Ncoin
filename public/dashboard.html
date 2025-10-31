@@ -2,80 +2,86 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>マイページ</title>
+  <title>Dashboard</title>
 </head>
 <body>
-  <div>
-    <span id="user"></span> | 
-    <button onclick="logout()">ログアウト</button>
-  </div>
+  <h1 id="welcome"></h1>
+  <h2>残高: <span id="balance">0</span> コイン</h2>
 
-  <h2>所持金: <span id="balance"></span> コイン</h2>
-  <button onclick="sendCoin()">クエスト報酬 +100</button>
+  <h2>クエスト報酬</h2>
+  <input type="number" id="questAmount" placeholder="獲得コイン">
+  <button id="questBtn">報酬を獲得</button>
+  <h2>送金</h2>
+  <input type="text" id="sendTo" placeholder="送金先ニックネーム">
+  <input type="number" id="sendAmount" placeholder="送金額">
+  <button id="sendBtn">送金する</button>
 
-  <hr>
+  <h2>ランキング</h2>
+  <ol id="rankingList"></ol>
 
-  <h3>ランキング</h3>
-  <ul id="ranking"></ul>
-
-  <h3>送金履歴</h3>
-  <ul id="history"></ul>
+  <h2>送金履歴 / クエスト履歴</h2>
+  <ul id="historyList"></ul>
 
   <script>
-    const user = localStorage.getItem("nickname");
-    if (!user) location.href = "/login";
-
-    const balanceElem = document.getElementById("balance");
-    const rankingElem = document.getElementById("ranking");
-    const historyElem = document.getElementById("history");
-
-    document.getElementById("user").textContent = user;
-    balanceElem.textContent = localStorage.getItem("balance");
-
-    // 初期化された履歴がなければ作成
-    if (!localStorage.getItem("history")) localStorage.setItem("history", JSON.stringify([]));
-
-    function sendCoin() {
-      let bal = parseInt(localStorage.getItem("balance")) || 0;
-      bal += 100;
-      localStorage.setItem("balance", bal);
-      balanceElem.textContent = bal;
-
-      // 履歴に追加
-      const history = JSON.parse(localStorage.getItem("history"));
-      const now = new Date().toLocaleString();
-      history.push({ type: "クエスト報酬", amount: 100, date: now });
-      localStorage.setItem("history", JSON.stringify(history));
-
-      alert("クエスト達成！+100コイン");
-      updateHistory();
-      updateRanking();
+    let nickname = localStorage.getItem("nickname");
+    if (!nickname) {
+      alert("ログイン情報がありません");
+      location.href = "/login.html";
     }
 
-    function logout() {
-      localStorage.clear();
-      window.location.href = "/";
+    document.getElementById("welcome").textContent = `ようこそ ${nickname} さん`;
+
+    const balanceEl = document.getElementById("balance");
+    const rankingEl = document.getElementById("rankingList");
+    const historyEl = document.getElementById("historyList");
+
+    async function fetchBalance() {
+      const res = await fetch(`/balance/${nickname}`);
+      const data = await res.json();
+      balanceEl.textContent = data.balance;
     }
 
-    function updateHistory() {
-      const history = JSON.parse(localStorage.getItem("history"));
-      historyElem.innerHTML = "";
-      history.forEach(h => {
+    document.getElementById("questBtn").addEventListener("click", async () => {
+      const amount = Number(document.getElementById("questAmount").value);
+      if (!amount) return;
+      const res = await fetch("/quest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname, amount })
+      });
+      const data = await res.json();
+      balanceEl.textContent = data.balance;
+      fetchHistory();
+      fetchRanking();
+    });
+
+    async function fetchRanking() {
+      const res = await fetch("/ranking");
+      const ranking = await res.json();
+      rankingEl.innerHTML = "";
+      ranking.forEach(u => {
         const li = document.createElement("li");
-        li.textContent = `${h.date} : ${h.type} ${h.amount}コイン`;
-        historyElem.appendChild(li);
+        li.textContent = `${u.nickname}: ${u.balance} コイン`;
+        rankingEl.appendChild(li);
       });
     }
 
-    function updateRanking() {
-      // ローカルストレージ上の簡易ランキング（自分だけなので自分表示）
-      const bal = parseInt(localStorage.getItem("balance")) || 0;
-      rankingElem.innerHTML = `<li>${user} : ${bal}コイン</li>`;
+    async function fetchHistory() {
+      const res = await fetch(`/history/${nickname}`);
+      const history = await res.json();
+      historyEl.innerHTML = "";
+      history.forEach(h => {
+        const li = document.createElement("li");
+        let text = `[${h.date.split("T")[0]}] `;
+        if (h.type === "クエスト報酬") text += `クエスト報酬: +${h.amount}`;
+        li.textContent = text;
+        historyEl.appendChild(li);
+      });
     }
 
-    // 初回表示
-    updateHistory();
-    updateRanking();
+    fetchBalance();
+    fetchRanking();
+    fetchHistory();
   </script>
 </body>
 </html>

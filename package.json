@@ -1,4 +1,5 @@
 {
+  "nickname": "ユーザー名", "amount": 1000,
   "name": "ncoin",
   "version": "1.0.0",
   "description": "Ncoin app for Railway",

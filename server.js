@@ -5,11 +5,25 @@ require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const ACCESS_CODE = process.env.ACCESS_CODE;
+const ACCESS_CODE = process.env.ACCESS_CODE || "12345";
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static("public"));
+
+// DB読み書き関数
+function loadDB() {
+  try {
+    const data = fs.readFileSync("users.json", "utf8");
+    return data ? JSON.parse(data) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveDB(db) {
+  fs.writeFileSync("users.json", JSON.stringify(db, null, 2));
+}
 
 // --- パスコードページ ---
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
@@ -23,15 +37,20 @@ app.post("/auth", (req, res) => {
 // --- ログイン ---
 app.post("/login", (req, res) => {
   const nickname = req.body.nickname;
-  const db = JSON.parse(fs.readFileSync("users.json", "utf8"));
+  const db = loadDB();
   if (!db[nickname]) db[nickname] = { balance: 1000, history: [] };
-  fs.writeFileSync("users.json", JSON.stringify(db, null, 2));
+  saveDB(db);
   res.json({ success: true, nickname });
+});
+
+// --- ダッシュボード ---
+app.get("/dashboard", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/dashboard.html"));
 });
 
 // --- 残高取得 ---
 app.get("/balance/:nickname", (req, res) => {
-  const db = JSON.parse(fs.readFileSync("users.json", "utf8"));
+  const db = loadDB();
   const user = db[req.params.nickname];
   if (!user) return res.status(404).json({ error: "ユーザーが存在しません" });
   res.json({ balance: user.balance });
@@ -40,17 +59,17 @@ app.get("/balance/:nickname", (req, res) => {
 // --- クエスト報酬 ---
 app.post("/quest", (req, res) => {
   const { nickname, amount } = req.body;
-  const db = JSON.parse(fs.readFileSync("users.json", "utf8"));
+  const db = loadDB();
   if (!db[nickname]) return res.status(404).json({ error: "ユーザーが存在しません" });
   db[nickname].balance += amount;
   db[nickname].history.push({ type: "クエスト報酬", amount, date: new Date().toISOString() });
-  fs.writeFileSync("users.json", JSON.stringify(db, null, 2));
+  saveDB(db);
   res.json({ balance: db[nickname].balance });
 });
 
 // --- ランキング ---
 app.get("/ranking", (req, res) => {
-  const db = JSON.parse(fs.readFileSync("users.json", "utf8"));
+  const db = loadDB();
   const ranking = Object.entries(db)
     .sort((a, b) => b[1].balance - a[1].balance)
     .map(([name, data]) => ({ nickname: name, balance: data.balance }));
@@ -59,10 +78,29 @@ app.get("/ranking", (req, res) => {
 
 // --- 履歴 ---
 app.get("/history/:nickname", (req, res) => {
-  const db = JSON.parse(fs.readFileSync("users.json", "utf8"));
+  const db = loadDB();
   const user = db[req.params.nickname];
   if (!user) return res.status(404).json({ error: "ユーザーが存在しません" });
   res.json(user.history);
+});
+// --- 送金 ---
+app.post("/send", (req, res) => {
+  const { from, to, amount } = req.body;
+  const db = loadDB();
+
+  if (!db[from]) return res.status(404).json({ error: "送金元ユーザーが存在しません" });
+  if (!db[to]) return res.status(404).json({ error: "送金先ユーザーが存在しません" });
+  if (db[from].balance < amount) return res.status(400).json({ error: "残高不足" });
+
+  db[from].balance -= amount;
+  db[to].balance += amount;
+
+  const date = new Date().toISOString();
+  db[from].history.push({ type: "送金", to, amount, date });
+  db[to].history.push({ type: "受取", from, amount, date });
+
+  saveDB(db);
+  res.json({ success: true, balance: db[from].balance });
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

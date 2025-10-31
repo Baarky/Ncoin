@@ -2,21 +2,31 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>ログイン</title>
+  <title>Login</title>
 </head>
 <body>
-  <h2>ニックネームを入力してください</h2>
-  <input type="text" id="nickname" placeholder="例: Rei" required>
-  <button onclick="login()">ログイン</button>
+  <h1>ログイン</h1>
+  <input type="text" id="nickname" placeholder="ニックネーム">
+  <button id="loginBtn">ログイン</button>
 
   <script>
-    function login() {
-      const name = document.getElementById("nickname").value.trim();
-      if (!name) return alert("ニックネームを入力してください");
-      localStorage.setItem("nickname", name);
-      localStorage.setItem("balance", 1000);
-      window.location.href = "/dashboard";
-    }
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const nickname = document.getElementById("nickname").value.trim();
+      if (!nickname) return alert("ニックネームを入力してください");
+
+      const res = await fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname })
+      });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem("nickname", data.nickname);
+        location.href = "/dashboard";
+      } else {
+        alert("ログインできませんでした");
+      }
+    });
   </script>
 </body>
 </html>
