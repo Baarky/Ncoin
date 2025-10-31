@@ -7,13 +7,11 @@
 </head>
 <body>
   <h1>QRコードで送金</h1>
-  
-  <!-- カメラプレビュー -->
   <div id="reader" style="width:300px;"></div>
 
-  <h3>送金先: <span id="recipient"></span></h3>
+  <h3>送金先: <span id="recipient">なし</span></h3>
   <input type="number" id="amount" placeholder="送金額">
-  <button id="sendBtn">送金</button>
+  <button id="sendBtn" disabled>送金</button>
 
   <script>
     const nickname = localStorage.getItem("nickname");
@@ -29,32 +27,37 @@
     Html5Qrcode.getCameras().then(devices => {
       if (devices && devices.length) {
         html5QrCode.start(
-          { facingMode: "environment" }, 
+          { facingMode: "environment" },
           { fps: 10, qrbox: 250 },
           (decodedText) => {
-            // QRに送金先ニックネームが入っている想定
-            recipientNickname = decodedText;
+            recipientNickname = decodedText.trim();
             document.getElementById("recipient").textContent = recipientNickname;
+            document.getElementById("sendBtn").disabled = false;
             html5QrCode.stop();
-          }
+          },
+          (error) => { /* 読み取り失敗は無視 */ }
         );
       }
-    }).catch(err => console.error(err));
+    }).catch(console.error);
 
-    // 送金
+    // 送金ボタン
     document.getElementById("sendBtn").addEventListener("click", async () => {
       const amount = Number(document.getElementById("amount").value);
       if (!recipientNickname) return alert("QRを読み取ってください");
-      if (!amount) return alert("送金額を入力してください");
+      if (!amount || amount <= 0) return alert("送金額を入力してください");
 
       const res = await fetch("/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ from: nickname, to: recipientNickname, amount })
       });
+
       const data = await res.json();
       if (data.error) alert(data.error);
-      else alert(`送金成功! 残高: ${data.balance}`);
+      else {
+        alert(`送金成功! 残高: ${data.balance}`);
+        location.href = "/dashboard"; // 送金後はダッシュボードに戻る
+      }
     });
   </script>
 </body>
