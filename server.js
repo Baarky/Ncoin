@@ -102,5 +102,25 @@ app.post("/send", (req, res) => {
   saveDB(db);
   res.json({ success: true, balance: db[from].balance });
 });
+// 送金ボタン
+document.getElementById("sendBtn").addEventListener("click", async () => {
+  const to = document.getElementById("sendTo").value.trim();
+  const amount = Number(document.getElementById("sendAmount").value);
+  if (!to || !amount) return alert("送金先と金額を入力してください");
+
+  const res = await fetch("/send", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ from: nickname, to, amount })
+  });
+
+  const data = await res.json();
+  if (data.error) return alert(data.error);
+
+  balanceEl.textContent = data.balance;
+  fetchHistory();
+  fetchRanking();
+  alert(`${amount} コインを ${to} に送金しました`);
+});
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
