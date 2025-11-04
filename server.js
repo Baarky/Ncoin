@@ -12,13 +12,13 @@ const server = http.createServer(app);
 const io = socketio(server);
 
 const { Sequelize, DataTypes, Op } = require("sequelize");
-
-// --- SQLite データベース ---
 const sequelize = new Sequelize({
   dialect: "sqlite",
+  dialectModule: require("better-sqlite3"),  // ← ここを追加
   storage: path.join(__dirname, "database.sqlite"),
   logging: false,
 });
+
 
 // --- モデル定義 ---
 const User = sequelize.define("User", {

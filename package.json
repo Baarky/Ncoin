@@ -9,12 +9,12 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "better-sqlite3": "^12.4.1",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "pg": "^8.16.3",
     "qrcode": "^1.5.4",
     "sequelize": "^6.37.7",
-    "socket.io": "^4.8.1",
-    "sqlite3": "^5.1.7"
+    "socket.io": "^4.8.1"
   }
 }
