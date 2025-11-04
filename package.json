@@ -5,9 +5,10 @@
   "version": "1.0.0",
   "description": "Ncoin app for Railway",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
+"scripts": {
+  "start": "node server.js",
+  "postinstall": "npm rebuild sqlite3 --build-from-source"
+},
   "dependencies": {
     "express": "^4.21.2",
     "qrcode": "^1.5.3",
