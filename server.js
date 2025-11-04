@@ -11,9 +11,34 @@ const app = express();
 const server = http.createServer(app);
 const io = socketio(server);
 
-// --- データ管理（メモリベース） ---
-const users = {};
-const history = [];
+const { Sequelize, DataTypes, Op } = require("sequelize");
+
+// --- SQLite データベース ---
+const sequelize = new Sequelize({
+  dialect: "sqlite",
+  storage: path.join(__dirname, "database.sqlite"),
+  logging: false,
+});
+
+// --- モデル定義 ---
+const User = sequelize.define("User", {
+  nickname: { type: DataTypes.STRING, primaryKey: true },
+  balance: { type: DataTypes.INTEGER, defaultValue: 1000 },
+});
+
+const History = sequelize.define("History", {
+  type: DataTypes.STRING, // "送金" or "受取" or "クエスト報酬"
+  from: DataTypes.STRING,
+  to: DataTypes.STRING,
+  amount: DataTypes.INTEGER,
+  date: DataTypes.STRING,
+});
+
+// --- 初期化 ---
+(async () => {
+  await sequelize.sync();
+  console.log("✅ SQLite database synced");
+})();
 
 const ACCESS_CODE = process.env.ACCESS_CODE || "1234";
 
@@ -33,39 +58,41 @@ app.post("/auth", (req, res) => {
 });
 
 // --- ログイン ---
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const nickname = req.body.nickname;
-  if (!users[nickname]) {
-    users[nickname] = { balance: 1000 };
+  let user = await User.findByPk(nickname);
+  if (!user) {
+    user = await User.create({ nickname, balance: 1000 });
   }
   res.json({ success: true, nickname });
 });
 
-// --- 残高取得 ---
-app.get("/balance/:nickname", (req, res) => {
-  const user = users[req.params.nickname];
+// --- 残高 ---
+app.get("/balance/:nickname", async (req, res) => {
+  const user = await User.findByPk(req.params.nickname);
   if (!user) return res.status(404).json({ error: "ユーザーが存在しません" });
   res.json({ balance: user.balance });
 });
 
 // --- クエスト報酬 ---
-app.post("/quest", (req, res) => {
+app.post("/quest", async (req, res) => {
   const { nickname, amount } = req.body;
-  const user = users[nickname];
+  const user = await User.findByPk(nickname);
   if (!user) return res.status(404).json({ error: "ユーザーが存在しません" });
 
   user.balance += amount;
-  history.push({ type: "クエスト報酬", to: nickname, amount, date: new Date().toISOString() });
+  await user.save();
+  await History.create({ type: "クエスト報酬", to: nickname, amount, date: new Date().toISOString() });
 
   io.emit("update");
   res.json({ balance: user.balance });
 });
 
 // --- 送金 ---
-app.post("/send", (req, res) => {
+app.post("/send", async (req, res) => {
   const { from, to, amount } = req.body;
-  const sender = users[from];
-  const receiver = users[to];
+  const sender = await User.findByPk(from);
+  const receiver = await User.findByPk(to);
 
   if (!sender || !receiver) return res.status(400).json({ error: "ユーザーが存在しません" });
   if (sender.balance < amount) return res.status(400).json({ error: "残高不足" });
@@ -73,11 +100,14 @@ app.post("/send", (req, res) => {
   sender.balance -= amount;
   receiver.balance += amount;
 
+  await sender.save();
+  await receiver.save();
+
   const date = new Date().toISOString();
-  history.push(
+  await History.bulkCreate([
     { type: "送金", from, to, amount, date },
-    { type: "受取", from, to, amount, date }
-  );
+    { type: "受取", from, to, amount, date },
+  ]);
 
   io.emit("update");
   res.json({ success: true, balance: sender.balance });
@@ -92,22 +122,23 @@ app.get("/generate-qr/:nickname/:amount", async (req, res) => {
 });
 
 // --- ランキング ---
-app.get("/ranking", (req, res) => {
-  const ranking = Object.entries(users)
-    .map(([nickname, u]) => ({ nickname, balance: u.balance }))
-    .sort((a, b) => b.balance - a.balance);
+app.get("/ranking", async (req, res) => {
+  const users = await User.findAll({ order: [["balance", "DESC"]] });
+  const ranking = users.map(u => ({ nickname: u.nickname, balance: u.balance }));
   res.json(ranking);
 });
 
 // --- 履歴 ---
-app.get("/history/:nickname", (req, res) => {
-  const userHistory = history.filter(h => h.from === req.params.nickname || h.to === req.params.nickname);
-  res.json(userHistory);
+app.get("/history/:nickname", async (req, res) => {
+  const history = await History.findAll({
+    where: { [Op.or]: [{ from: req.params.nickname }, { to: req.params.nickname }] },
+    order: [["date", "DESC"]],
+  });
+  res.json(history);
 });
 
 // --- Socket.io ---
 io.on("connection", () => console.log("✅ A user connected"));
 
-// --- サーバー起動 ---
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
