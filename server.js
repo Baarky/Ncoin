@@ -4,35 +4,39 @@ const path = require("path");
 const QRCode = require("qrcode");
 const http = require("http");
 const socketio = require("socket.io");
-const Database = require("better-sqlite3");
+const { Sequelize, DataTypes } = require("sequelize");
 
 const app = express();
 const server = http.createServer(app);
 const io = socketio(server);
 
-// --- DB 初期化 ---
-const db = new Database(path.join(__dirname, "data.sqlite"));
+// --- Sequelize 初期化 ---
+const sequelize = new Sequelize({
+  dialect: "sqlite",
+  storage: "./database.sqlite",
+  logging: false
+});
 
-// ユーザーテーブル
-db.prepare(`
-  CREATE TABLE IF NOT EXISTS users (
-    nickname TEXT PRIMARY KEY,
-    balance INTEGER DEFAULT 1000
-  )
-`).run();
+// --- モデル定義 ---
+const User = sequelize.define("User", {
+  nickname: { type: DataTypes.STRING, primaryKey: true },
+  balance: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1000 }
+});
 
-// 履歴テーブル
-db.prepare(`
-  CREATE TABLE IF NOT EXISTS history (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT,
-    sender TEXT,
-    receiver TEXT,
-    amount INTEGER,
-    date TEXT
-  )
-`).run();
+const History = sequelize.define("History", {
+  type: DataTypes.STRING,
+  sender: DataTypes.STRING,
+  receiver: DataTypes.STRING,
+  amount: DataTypes.INTEGER,
+  date: DataTypes.STRING
+});
 
+(async () => {
+  await sequelize.sync();
+  console.log("✅ SQLite synced successfully");
+})();
+
+// --- ミドルウェア ---
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static("public"));
@@ -42,75 +46,62 @@ app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html"
 app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "public/dashboard.html")));
 app.get("/pay.html", (req, res) => res.sendFile(path.join(__dirname, "public/pay.html")));
 
-// --- ログイン処理 ---
-app.post("/login", (req, res) => {
+// --- ログイン ---
+app.post("/login", async (req, res) => {
   const nickname = req.body.nickname;
-  const user = db.prepare("SELECT * FROM users WHERE nickname = ?").get(nickname);
+  let user = await User.findByPk(nickname);
   if (!user) {
-    db.prepare("INSERT INTO users (nickname, balance) VALUES (?, ?)").run(nickname, 1000);
+    user = await User.create({ nickname, balance: 1000 });
   }
   res.json({ success: true, nickname });
 });
 
 // --- 残高取得 ---
-app.get("/balance/:nickname", (req, res) => {
-  const user = db.prepare("SELECT * FROM users WHERE nickname = ?").get(req.params.nickname);
+app.get("/balance/:nickname", async (req, res) => {
+  const user = await User.findByPk(req.params.nickname);
   if (!user) return res.status(404).json({ error: "ユーザーが存在しません" });
   res.json({ balance: user.balance });
 });
 
 // --- クエスト報酬 ---
-app.post("/quest", (req, res) => {
+app.post("/quest", async (req, res) => {
   const { nickname, amount } = req.body;
-  const user = db.prepare("SELECT * FROM users WHERE nickname = ?").get(nickname);
+  const user = await User.findByPk(nickname);
   if (!user) return res.status(404).json({ error: "ユーザーが存在しません" });
 
-  const newBalance = user.balance + Number(amount);
-  db.prepare("UPDATE users SET balance = ? WHERE nickname = ?").run(newBalance, nickname);
-  db.prepare("INSERT INTO history (type, receiver, amount, date) VALUES (?, ?, ?, ?)").run(
-    "クエスト報酬",
-    nickname,
+  user.balance += Number(amount);
+  await user.save();
+  await History.create({
+    type: "クエスト報酬",
+    receiver: nickname,
     amount,
-    new Date().toISOString()
-  );
+    date: new Date().toISOString()
+  });
 
   io.emit("update");
-  res.json({ balance: newBalance });
+  res.json({ balance: user.balance });
 });
 
 // --- 送金 ---
-app.post("/send", (req, res) => {
+app.post("/send", async (req, res) => {
   const { from, to, amount } = req.body;
-  const sender = db.prepare("SELECT * FROM users WHERE nickname = ?").get(from);
-  const receiver = db.prepare("SELECT * FROM users WHERE nickname = ?").get(to);
+  const sender = await User.findByPk(from);
+  const receiver = await User.findByPk(to);
 
   if (!sender || !receiver) return res.status(400).json({ error: "ユーザーが存在しません" });
   if (sender.balance < amount) return res.status(400).json({ error: "残高不足" });
 
-  const senderNew = sender.balance - amount;
-  const receiverNew = receiver.balance + Number(amount);
-
-  db.prepare("UPDATE users SET balance = ? WHERE nickname = ?").run(senderNew, from);
-  db.prepare("UPDATE users SET balance = ? WHERE nickname = ?").run(receiverNew, to);
+  sender.balance -= amount;
+  receiver.balance += Number(amount);
+  await sender.save();
+  await receiver.save();
 
   const date = new Date().toISOString();
-  db.prepare("INSERT INTO history (type, sender, receiver, amount, date) VALUES (?, ?, ?, ?, ?)").run(
-    "送金",
-    from,
-    to,
-    amount,
-    date
-  );
-  db.prepare("INSERT INTO history (type, sender, receiver, amount, date) VALUES (?, ?, ?, ?, ?)").run(
-    "受取",
-    from,
-    to,
-    amount,
-    date
-  );
+  await History.create({ type: "送金", sender: from, receiver: to, amount, date });
+  await History.create({ type: "受取", sender: from, receiver: to, amount, date });
 
   io.emit("update");
-  res.json({ success: true, balance: senderNew });
+  res.json({ success: true, balance: sender.balance });
 });
 
 // --- QRコード生成 ---
@@ -122,18 +113,23 @@ app.get("/generate-qr/:nickname/:amount", async (req, res) => {
 });
 
 // --- ランキング ---
-app.get("/ranking", (req, res) => {
-  const ranking = db.prepare("SELECT nickname, balance FROM users ORDER BY balance DESC").all();
+app.get("/ranking", async (req, res) => {
+  const ranking = await User.findAll({
+    order: [["balance", "DESC"]],
+    attributes: ["nickname", "balance"]
+  });
   res.json(ranking);
 });
 
 // --- 履歴 ---
-app.get("/history/:nickname", (req, res) => {
-  const history = db.prepare(`
-    SELECT * FROM history
-    WHERE sender = ? OR receiver = ?
-    ORDER BY date DESC
-  `).all(req.params.nickname, req.params.nickname);
+app.get("/history/:nickname", async (req, res) => {
+  const nickname = req.params.nickname;
+  const history = await History.findAll({
+    where: {
+      [Sequelize.Op.or]: [{ sender: nickname }, { receiver: nickname }]
+    },
+    order: [["date", "DESC"]]
+  });
   res.json(history);
 });
 
