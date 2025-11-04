@@ -5,15 +5,28 @@
   "version": "1.0.0",
   "description": "Ncoin app for Railway",
   "main": "server.js",
-"scripts": {
-  "start": "node server.js",
-  "postinstall": "npm rebuild sqlite3 --build-from-source"
-},
+  "scripts": {
+    "start": "node server.js",
+    "postinstall": "npm rebuild sqlite3 --build-from-source"
+  },
   "dependencies": {
+    "better-sqlite3": "^12.4.1",
     "express": "^4.21.2",
-    "qrcode": "^1.5.3",
+    "qrcode": "^1.5.4",
     "sequelize": "^6.37.7",
     "socket.io": "^4.8.1",
     "sqlite3": "^5.1.6"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Baarky/Ncoin.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Baarky/Ncoin/issues"
+  },
+  "homepage": "https://github.com/Baarky/Ncoin#readme"
 }
