@@ -2,7 +2,7 @@ import http from "k6/http";
 import { sleep } from "k6";
 
 export const options = {
-  vus: 50,          // 仮想ユーザー50人
+  vus: 100,          // 仮想ユーザー50人
   iterations: 25000, // 合計リクエスト回数（1人500回）
   thresholds: {
     http_req_failed: ["rate<0.05"], // 失敗率5%未満を目標
