@@ -147,6 +147,20 @@ app.get("/history/:nickname", (req, res) => {
 io.on("connection", socket => {
   console.log("A user connected");
 });
+// --- 管理ページ: ログ表示 ---
+app.get("/admin/logs", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/admin_logs.html"));
+});
+
+// --- ログデータ取得API ---
+app.get("/api/logs", (req, res) => {
+  try {
+    const logs = JSON.parse(fs.readFileSync("requests_log.json", "utf8"));
+    res.json(logs);
+  } catch {
+    res.json([]);
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

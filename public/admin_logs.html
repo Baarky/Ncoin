@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>アクセスログモニター</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 20px;
+      background: #f7f9fc;
+    }
+    h1 { color: #333; }
+    canvas {
+      max-width: 800px;
+      margin: 20px auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 10px;
+    }
+    #logList {
+      max-width: 800px;
+      margin: 20px auto;
+      text-align: left;
+      font-size: 0.9em;
+      background: white;
+      border-radius: 8px;
+      padding: 10px;
+      overflow-y: auto;
+      max-height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📊 アクセスログモニター</h1>
+  <canvas id="chart"></canvas>
+  <div id="logList"></div>
+
+  <script>
+    const ctx = document.getElementById("chart").getContext("2d");
+    let chart;
+
+    async function fetchLogs() {
+      const res = await fetch("/api/logs");
+      const logs = await res.json();
+      render(logs);
+    }
+
+    function render(logs) {
+      const counts = {};
+      logs.forEach(l => {
+        counts[l.path] = (counts[l.path] || 0) + 1;
+      });
+
+      const labels = Object.keys(counts);
+      const data = Object.values(counts);
+
+      if (!chart) {
+        chart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [{
+              label: "API呼び出し回数",
+              data,
+            }]
+          },
+          options: {
+            scales: {
+              y: { beginAtZero: true }
+            }
+          }
+        });
+      } else {
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = data;
+        chart.update();
+      }
+
+      const list = logs.slice(-20).reverse()
+        .map(l => `<div>[${l.time}] ${l.method} ${l.path}</div>`)
+        .join("");
+      document.getElementById("logList").innerHTML = list;
+    }
+
+    // 初回 + 5秒ごと更新
+    fetc
