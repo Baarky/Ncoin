@@ -16,19 +16,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static("public"));
 
-// === DB読み込み ===
-function loadDB() {
-  const file = "users.json";
-  try {
-    if (!fs.existsSync(file)) fs.writeFileSync(file, "{}");
-    return JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch (err) {
-    console.error("❌ DB読み込みエラー:", err);
-    return {};
-  }
-}
-
-
 // ======== 🚧 安全な書き込みキュー機構 ========
 let writeQueue = Promise.resolve();
 
@@ -42,7 +29,6 @@ async function safeSaveDB(db) {
   );
   return writeQueue;
 }
-// ======== 🚀 遅延フラッシュ機構 (高負荷対応) ========
 // ======== ⚡ 高負荷対応・遅延書き込みキャッシュ ========
 let dbCache = null;
 let saveTimer = null;
@@ -84,10 +70,19 @@ process.on("SIGTERM", () => {
   process.exit(0);
 });
 // ==============================================
+// === 起動時にデフォルトユーザーを登録 ===
+function initUsers() {
+  const db = loadDB();
+  for (let i = 0; i < 50; i++) {
+    const name = `user${i}`;
+    if (!db[name]) db[name] = { balance: 1000, history: [] };
+  }
+  safeSaveDB(db);
+  console.log("✅ 初期ユーザー50人登録完了");
+}
 
-// ==============================================
+initUsers();
 
-// ==============================================
 
 // === ページルート ===
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
