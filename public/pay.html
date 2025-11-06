@@ -32,49 +32,50 @@
   </div>
 
   <script>
-    const html5QrCode = new Html5Qrcode("reader");
-    let recipientNickname = null;
+  const html5QrCode = new Html5Qrcode("reader");
+  let recipientNickname = null;
 
-    // カメラ一覧を取得して外カメを優先
-    Html5Qrcode.getCameras().then(cameras => {
-      if (cameras && cameras.length) {
-        // 外カメ（back, environment）を優先して選択
-        let backCamera = cameras.find(cam =>
-          cam.label.toLowerCase().includes("back") ||
-          cam.label.toLowerCase().includes("environment")
-        );
+  // カメラでQRコードをスキャン
+  Html5Qrcode.getCameras().then(cameras => {
+    if (cameras && cameras.length) {
+      // ✅ 外カメラ（リアカメラ）を優先的に選択
+      let backCamera = cameras.find(cam =>
+        cam.label.toLowerCase().includes("back") ||
+        cam.label.toLowerCase().includes("rear") ||
+        cam.label.toLowerCase().includes("environment")
+      );
 
-        const cameraId = backCamera ? backCamera.id : cameras[0].id; // fallback to first camera
+      // 外カメラが見つからない場合は最初のカメラを使用
+      const cameraId = backCamera ? backCamera.id : cameras[0].id;
 
-        html5QrCode.start(
-          cameraId,
-          { fps: 10, qrbox: 250 },
-          (decodedText) => {
-            try {
-              const url = new URL(decodedText);
-              const fromParam = url.searchParams.get("from");
+      html5QrCode.start(
+        cameraId,
+        { fps: 10, qrbox: 250 },
+        (decodedText) => {
+          try {
+            const url = new URL(decodedText);
+            const fromParam = url.searchParams.get("from");
 
-              if (fromParam) {
-                recipientNickname = fromParam;
-                document.getElementById("recipient").textContent = recipientNickname;
-                document.getElementById("sendBtn").disabled = false;
-                html5QrCode.stop();
-              } else {
-                alert("QRコードに送信者情報が含まれていません。");
-              }
-            } catch {
-              alert("無効なQRコードです。");
+            if (fromParam) {
+              recipientNickname = fromParam;
+              document.getElementById("recipient").textContent = recipientNickname;
+              document.getElementById("sendBtn").disabled = false;
+              html5QrCode.stop();
+            } else {
+              alert("QRコードに送信者情報が含まれていません。");
             }
-          },
-          (errorMessage) => { /* スキャン失敗時は無視 */ }
-        );
-      } else {
-        alert("カメラが見つかりません。");
-      }
-    }).catch(err => {
-      alert("カメラのアクセスに失敗しました: " + err);
-    });
-
+          } catch {
+            alert("無効なQRコードです。");
+          }
+        },
+        (errorMessage) => { /* スキャン失敗時は無視 */ }
+      );
+    } else {
+      alert("カメラが見つかりません。");
+    }
+  }).catch(err => {
+    alert("カメラのアクセスに失敗しました: " + err);
+  });
     // ✅ 送金処理
     document.getElementById("sendBtn").addEventListener("click", async () => {
       const amount = parseInt(document.getElementById("amount").value);
