@@ -1,5 +1,6 @@
 const express = require("express");
 const fs = require("fs");
+
 const path = require("path");
 require("dotenv").config();
 
@@ -9,33 +10,66 @@ const io = require("socket.io")(server);
 const QRCode = require("qrcode");
 
 const ACCESS_CODE = process.env.ACCESS_CODE;
-
+const cors = require("cors");
+app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static("public"));
 
 // === DB読み込み ===
 function loadDB() {
+  const file = "users.json";
   try {
-    return JSON.parse(fs.readFileSync("users.json", "utf8"));
-  } catch {
+    if (!fs.existsSync(file)) fs.writeFileSync(file, "{}");
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch (err) {
+    console.error("❌ DB読み込みエラー:", err);
     return {};
   }
 }
+
 
 // ======== 🚧 安全な書き込みキュー機構 ========
 let writeQueue = Promise.resolve();
 
 // 書き込みを直列化してファイル競合を防止
-function safeSaveDB(db) {
+async function safeSaveDB(db) {
   const data = JSON.stringify(db, null, 2);
   writeQueue = writeQueue.then(() =>
-    fs.promises
-      .writeFile("users.json", data)
-      .catch((err) => console.error("❌ 書き込みエラー:", err))
+    fs.promises.writeFile("users.json", data).catch(err => {
+      console.error("❌ users.json書き込み失敗:", err);
+    })
   );
   return writeQueue;
 }
+// ======== 🚀 遅延フラッシュ機構 (高負荷対応) ========
+let dbCache = null;
+let saveTimer = null;
+
+function loadDB() {
+  try {
+    if (dbCache) return dbCache;
+    dbCache = JSON.parse(fs.readFileSync("users.json", "utf8"));
+    return dbCache;
+  } catch {
+    dbCache = {};
+    return dbCache;
+  }
+}
+
+function safeSaveDB(db) {
+  dbCache = db;
+  if (saveTimer) return; // すでにタイマー動作中ならスキップ
+
+  saveTimer = setTimeout(() => {
+    fs.writeFile("users.json", JSON.stringify(dbCache, null, 2), (err) => {
+      if (err) console.error("❌ 書き込みエラー:", err);
+      saveTimer = null;
+    });
+  }, 500); // 0.5秒後にまとめて書き込み
+}
+// ==============================================
+
 // ==============================================
 
 // === ページルート ===
@@ -68,6 +102,11 @@ app.get("/balance/:nickname", (req, res) => {
 
 // === クエスト報酬 ===
 app.post("/quest", async (req, res) => {
+  const reward = Number(amount);
+  if (!Number.isFinite(reward) || reward <= 0) {
+    return res.status(400).json({ error: "金額が無効です" });
+  }
+
   const { nickname, amount } = req.body;
   const db = loadDB();
   if (!db[nickname]) return res.status(404).json({ error: "ユーザーが存在しません" });
