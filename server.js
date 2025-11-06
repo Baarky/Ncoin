@@ -43,31 +43,48 @@ async function safeSaveDB(db) {
   return writeQueue;
 }
 // ======== 🚀 遅延フラッシュ機構 (高負荷対応) ========
+// ======== ⚡ 高負荷対応・遅延書き込みキャッシュ ========
 let dbCache = null;
 let saveTimer = null;
+let dirty = false;
 
 function loadDB() {
+  if (dbCache) return dbCache;
   try {
-    if (dbCache) return dbCache;
     dbCache = JSON.parse(fs.readFileSync("users.json", "utf8"));
-    return dbCache;
   } catch {
     dbCache = {};
-    return dbCache;
   }
+  return dbCache;
 }
 
 function safeSaveDB(db) {
   dbCache = db;
-  if (saveTimer) return; // すでにタイマー動作中ならスキップ
+  dirty = true;
 
-  saveTimer = setTimeout(() => {
-    fs.writeFile("users.json", JSON.stringify(dbCache, null, 2), (err) => {
-      if (err) console.error("❌ 書き込みエラー:", err);
-      saveTimer = null;
-    });
-  }, 1000);
+  // 5秒ごとにまとめて書き込み
+  if (!saveTimer) {
+    saveTimer = setInterval(() => {
+      if (dirty) {
+        fs.writeFile("users.json", JSON.stringify(dbCache, null, 2), (err) => {
+          if (err) console.error("❌ 書き込み失敗:", err);
+        });
+        dirty = false;
+      }
+    }, 5000);
+  }
 }
+
+// サーバー終了時に最後の保存
+process.on("SIGTERM", () => {
+  if (dirty) {
+    fs.writeFileSync("users.json", JSON.stringify(dbCache, null, 2));
+    console.log("✅ 最終データ保存完了");
+  }
+  process.exit(0);
+});
+// ==============================================
+
 // ==============================================
 
 // ==============================================
