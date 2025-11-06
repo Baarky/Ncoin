@@ -16,37 +16,44 @@ app.use(express.static("public"));
 
 // --- DB ヘルパー ---
 function loadDB() {
-  try { return JSON.parse(fs.readFileSync("users.json", "utf8")); }
-  catch { return {}; }
-}
-function saveDB(db) {
-  // 擬似I/O遅延（20ms）
-  const start = Date.now();
-  while (Date.now() - start < 20) {} 
-  fs.writeFileSync("users.json", JSON.stringify(db, null, 2));
+  try {
+    return JSON.parse(fs.readFileSync("users.json", "utf8"));
+  } catch {
+    return {};
+  }
 }
 
+// ======== 🔒 安全な書き込みキュー機構 ========
+let writing = false;
+let writeQueue = [];
 
-// --- リクエストログ ---
-let requestBuffer = [];
-function logRequest(req) {
-  requestBuffer.push({
-    path: req.path,
-    method: req.method,
-    time: new Date().toISOString(),
-    body: Object.keys(req.body).length ? req.body : undefined,
+// 非同期書き込みを直列化
+function safeSaveDB(db) {
+  const data = JSON.stringify(db, null, 2);
+
+  if (writing) {
+    // 書き込み中なら次のデータをキューへ
+    writeQueue.push(data);
+    return;
+  }
+
+  writing = true;
+  fs.writeFile("users.json", data, (err) => {
+    writing = false;
+    if (err) console.error("書き込みエラー:", err);
+
+    // キューが溜まっていれば次を処理
+    if (writeQueue.length > 0) {
+      const next = writeQueue.shift();
+      fs.writeFile("users.json", next, (err2) => {
+        if (err2) console.error("書き込みエラー:", err2);
+        writing = false;
+        if (writeQueue.length > 0) safeSaveDB(JSON.parse(writeQueue.pop()));
+      });
+    }
   });
 }
-setInterval(() => {
-  if (requestBuffer.length > 0) {
-    const logPath = "requests_log.json";
-    let existing = [];
-    try { existing = JSON.parse(fs.readFileSync(logPath, "utf8")); } catch {}
-    existing.push(...requestBuffer);
-    fs.writeFileSync(logPath, JSON.stringify(existing, null, 2));
-    requestBuffer = [];
-  }
-}, 2000);
+// ==============================================
 
 // --- ルート ---
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
@@ -55,24 +62,21 @@ app.get("/pay.html", (req, res) => res.sendFile(path.join(__dirname, "public/pay
 
 // --- パスコード認証 ---
 app.post("/auth", (req, res) => {
-  logRequest(req);
   if (req.body.code === ACCESS_CODE) res.redirect("/login.html");
   else res.send("<h2>パスコードが違います。<a href='/'>戻る</a></h2>");
 });
 
 // --- ログイン ---
 app.post("/login", (req, res) => {
-  logRequest(req);
   const nickname = req.body.nickname;
   const db = loadDB();
   if (!db[nickname]) db[nickname] = { balance: 1000, history: [] };
-  saveDB(db);
+  safeSaveDB(db);
   res.json({ success: true, nickname });
 });
 
 // --- 残高 ---
 app.get("/balance/:nickname", (req, res) => {
-  logRequest(req);
   const db = loadDB();
   const user = db[req.params.nickname];
   if (!user) return res.status(404).json({ error: "ユーザーが存在しません" });
@@ -81,14 +85,13 @@ app.get("/balance/:nickname", (req, res) => {
 
 // --- クエスト報酬 ---
 app.post("/quest", (req, res) => {
-  logRequest(req);
   const { nickname, amount } = req.body;
   const db = loadDB();
   if (!db[nickname]) return res.status(404).json({ error: "ユーザーが存在しません" });
 
   db[nickname].balance += amount;
   db[nickname].history.push({ type: "クエスト報酬", amount, date: new Date().toISOString() });
-  saveDB(db);
+  safeSaveDB(db);
 
   io.emit("update");
   res.json({ balance: db[nickname].balance });
@@ -96,7 +99,6 @@ app.post("/quest", (req, res) => {
 
 // --- 送金 ---
 app.post("/send", (req, res) => {
-  logRequest(req);
   const { from, to, amount } = req.body;
   const db = loadDB();
   if (!db[from] || !db[to]) return res.status(400).json({ error: "ユーザーが存在しません" });
@@ -108,14 +110,13 @@ app.post("/send", (req, res) => {
   db[from].history.push({ type: "送金", to, amount, date });
   db[to].history.push({ type: "受取", from, amount, date });
 
-  saveDB(db);
+  safeSaveDB(db);
   io.emit("update");
   res.json({ success: true, balance: db[from].balance });
 });
 
 // --- QRコード生成 ---
 app.get("/generate-qr/:nickname/:amount", async (req, res) => {
-  logRequest(req);
   const { nickname, amount } = req.params;
   if (!nickname || !amount) return res.status(400).json({ error: "不足情報" });
 
@@ -130,7 +131,6 @@ app.get("/generate-qr/:nickname/:amount", async (req, res) => {
 
 // --- ランキング ---
 app.get("/ranking", (req, res) => {
-  logRequest(req);
   const db = loadDB();
   const ranking = Object.entries(db)
     .sort((a, b) => b[1].balance - a[1].balance)
@@ -140,7 +140,6 @@ app.get("/ranking", (req, res) => {
 
 // --- 履歴 ---
 app.get("/history/:nickname", (req, res) => {
-  logRequest(req);
   const db = loadDB();
   const user = db[req.params.nickname];
   if (!user) return res.status(404).json({ error: "ユーザーが存在しません" });
@@ -148,42 +147,9 @@ app.get("/history/:nickname", (req, res) => {
 });
 
 // --- Socket.io 接続 ---
-io.on("connection", socket => {
+io.on("connection", (socket) => {
   console.log("A user connected");
 });
-// --- 管理ページ: ログ表示 ---
-app.get("/admin/logs", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/admin_logs.html"));
-});
-
-// --- ログデータ取得API ---
-app.get("/api/logs", (req, res) => {
-  try {
-    const logs = JSON.parse(fs.readFileSync("requests_log.json", "utf8"));
-    res.json(logs);
-  } catch {
-    res.json([]);
-  }
-});
-// --- 起動時にテストユーザーを自動生成 ---
-function autoGenerateUsers(count = 100) {
-  const db = loadDB();
-  for (let i = 1; i <= count; i++) {
-    const name = `user${String(i).padStart(3, "0")}`;
-    if (!db[name]) {
-      db[name] = {
-        balance: Math.floor(Math.random() * 1000) + 500, // 500〜1500
-        history: [
-          { type: "初期付与", amount: db[name]?.balance ?? 0, date: new Date().toISOString() }
-        ]
-      };
-    }
-  }
-  saveDB(db);
-  console.log(`✅ ${count}ユーザーを自動生成しました`);
-}
-
-autoGenerateUsers(100); // ← ここで数を変えられる
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
