@@ -3,11 +3,46 @@
     "path": "/send",
     "method": "POST",
     "time": "2025-11-06T04:05:20.102Z",
-    "body": { "from": "Alice", "to": "Bob", "amount": 50 }
+    "body": {
+      "from": "Alice",
+      "to": "Bob",
+      "amount": 50
+    }
   },
   {
     "path": "/balance/Alice",
     "method": "GET",
     "time": "2025-11-06T04:05:21.300Z"
+  },
+  {
+    "path": "/auth",
+    "method": "POST",
+    "time": "2025-11-06T05:37:13.538Z",
+    "body": {
+      "code": "12345"
+    }
+  },
+  {
+    "path": "/login",
+    "method": "POST",
+    "time": "2025-11-06T05:37:15.329Z",
+    "body": {
+      "nickname": "バーキー"
+    }
+  },
+  {
+    "path": "/balance/%E3%83%90%E3%83%BC%E3%82%AD%E3%83%BC",
+    "method": "GET",
+    "time": "2025-11-06T05:37:15.387Z"
+  },
+  {
+    "path": "/ranking",
+    "method": "GET",
+    "time": "2025-11-06T05:37:15.389Z"
+  },
+  {
+    "path": "/history/%E3%83%90%E3%83%BC%E3%82%AD%E3%83%BC",
+    "method": "GET",
+    "time": "2025-11-06T05:37:15.393Z"
   }
 ]
