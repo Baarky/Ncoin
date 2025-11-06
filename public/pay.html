@@ -35,15 +35,22 @@
     const html5QrCode = new Html5Qrcode("reader");
     let recipientNickname = null;
 
-    // カメラでQRコードをスキャン
+    // カメラ一覧を取得して外カメを優先
     Html5Qrcode.getCameras().then(cameras => {
       if (cameras && cameras.length) {
+        // 外カメ（back, environment）を優先して選択
+        let backCamera = cameras.find(cam =>
+          cam.label.toLowerCase().includes("back") ||
+          cam.label.toLowerCase().includes("environment")
+        );
+
+        const cameraId = backCamera ? backCamera.id : cameras[0].id; // fallback to first camera
+
         html5QrCode.start(
-          cameras[0].id,
+          cameraId,
           { fps: 10, qrbox: 250 },
           (decodedText) => {
             try {
-              // ✅ URLから「from」パラメータを抽出
               const url = new URL(decodedText);
               const fromParam = url.searchParams.get("from");
 
@@ -91,7 +98,7 @@
       });
 
       const data = await res.json();
-      alert(data.message);
+      alert(data.message || "送金が完了しました。");
       if (res.ok) location.href = "/dashboard.html?nickname=" + encodeURIComponent(senderNickname);
     });
   </script>
