@@ -66,7 +66,7 @@ function safeSaveDB(db) {
       if (err) console.error("❌ 書き込みエラー:", err);
       saveTimer = null;
     });
-  }, 500); // 0.5秒後にまとめて書き込み
+  }, 1000);
 }
 // ==============================================
 
