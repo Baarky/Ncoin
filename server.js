@@ -179,7 +179,7 @@ function autoGenerateUsers(count = 100) {
   console.log(`✅ ${count}ユーザーを自動生成しました`);
 }
 
-autoGenerateUsers(50); // ← ここで数を変えられる
+autoGenerateUsers(100); // ← ここで数を変えられる
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
