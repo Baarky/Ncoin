@@ -102,22 +102,24 @@ app.get("/balance/:nickname", (req, res) => {
 
 // === クエスト報酬 ===
 app.post("/quest", async (req, res) => {
+  const { nickname, amount } = req.body;
   const reward = Number(amount);
+
   if (!Number.isFinite(reward) || reward <= 0) {
     return res.status(400).json({ error: "金額が無効です" });
   }
 
-  const { nickname, amount } = req.body;
   const db = loadDB();
   if (!db[nickname]) return res.status(404).json({ error: "ユーザーが存在しません" });
 
-  db[nickname].balance += amount;
-  db[nickname].history.push({ type: "クエスト報酬", amount, date: new Date().toISOString() });
+  db[nickname].balance += reward;
+  db[nickname].history.push({ type: "クエスト報酬", amount: reward, date: new Date().toISOString() });
   await safeSaveDB(db);
 
   io.emit("update");
   res.json({ balance: db[nickname].balance });
 });
+
 
 // === 送金 ===
 app.post("/send", async (req, res) => {
