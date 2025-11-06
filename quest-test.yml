@@ -1,0 +1,23 @@
+config:
+  target: "https://ncoin-production.up.railway.app"
+  phases:
+    - duration: 60   # 実行時間（秒） → 全体で1分間テスト
+      arrivalRate: 50  # 1秒あたり50ユーザーが同時実行
+scenarios:
+  - name: "Quest reward test"
+    flow:
+      - function: "randomUser"
+      - post:
+          url: "/quest"
+          json:
+            nickname: "{{ nickname }}"
+            amount: 10
+      - think: 0.1
+
+functions:
+  randomUser: |
+    function(userContext, events, done) {
+      const n = Math.floor(Math.random() * 50) + 1;
+      userContext.vars.nickname = "user" + n.toString().padStart(3, '0');
+      return done();
+    }
