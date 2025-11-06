@@ -73,7 +73,7 @@ process.on("SIGTERM", () => {
 // === 起動時にデフォルトユーザーを登録 ===
 function initUsers() {
   const db = loadDB();
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 100; i++) {
     const name = `user${i}`;
     if (!db[name]) db[name] = { balance: 1000, history: [] };
   }
