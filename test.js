@@ -1,27 +1,35 @@
-import http from "k6/http";
-import { sleep } from "k6";
+import http from 'k6/http';
+import { sleep, check } from 'k6';
 
 export const options = {
-  vus: 100,          // 仮想ユーザー50人
-  iterations: 25000, // 合計リクエスト回数（1人500回）
+  vus: 100, // ← 100人同時アクセス
+  iterations: 50000, // 合計リクエスト数（500回×100人）
   thresholds: {
-    http_req_failed: ["rate<0.05"], // 失敗率5%未満を目標
-    http_req_duration: ["p(95)<1000"], // 95%のリクエストが1秒以内
+    http_req_failed: ['rate<0.05'], // 失敗率5%未満
+    http_req_duration: ['p(95)<1000'], // 95%が1秒以内
   },
 };
 
 export default function () {
-  // 各仮想ユーザーに個別の名前を割り当て
-  const userId = `user${String(__VU).padStart(2, "0")}`;
+  const baseURL = 'https://ncoin-production.up.railway.app';
 
-  const url = "https://ncoin-production.up.railway.app/quest";
-  const payload = JSON.stringify({
-    nickname: userId,
-    amount: 10,
+  // ランダムユーザー名生成
+  const userA = `user${Math.floor(Math.random() * 50)}`;
+  const userB = `user${Math.floor(Math.random() * 50)}`;
+
+  // ランダム送金額
+  const amount = Math.floor(Math.random() * 50) + 1;
+
+  // 送金リクエスト
+  const res = http.post(`${baseURL}/send`, JSON.stringify({
+    from: userA,
+    to: userB,
+    amount,
+  }), { headers: { 'Content-Type': 'application/json' }});
+
+  check(res, {
+    'status is 200 or 400': (r) => [200, 400].includes(r.status),
   });
 
-  const params = { headers: { "Content-Type": "application/json" } };
-
-  http.post(url, payload, params);
-  sleep(0.2); // 少し間隔を空ける（負荷を現実的に）
+  sleep(0.1);
 }
