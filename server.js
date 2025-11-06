@@ -14,7 +14,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static("public"));
 
-// --- DB ヘルパー ---
+// === DB読み込み ===
 function loadDB() {
   try {
     return JSON.parse(fs.readFileSync("users.json", "utf8"));
@@ -23,50 +23,33 @@ function loadDB() {
   }
 }
 
-// ======== 🔒 安全な書き込みキュー機構 ========
-let writing = false;
-let writeQueue = [];
+// ======== 🚧 安全な書き込みキュー機構 ========
+let writeQueue = Promise.resolve();
 
-// 非同期書き込みを直列化
+// 書き込みを直列化してファイル競合を防止
 function safeSaveDB(db) {
   const data = JSON.stringify(db, null, 2);
-
-  if (writing) {
-    // 書き込み中なら次のデータをキューへ
-    writeQueue.push(data);
-    return;
-  }
-
-  writing = true;
-  fs.writeFile("users.json", data, (err) => {
-    writing = false;
-    if (err) console.error("書き込みエラー:", err);
-
-    // キューが溜まっていれば次を処理
-    if (writeQueue.length > 0) {
-      const next = writeQueue.shift();
-      fs.writeFile("users.json", next, (err2) => {
-        if (err2) console.error("書き込みエラー:", err2);
-        writing = false;
-        if (writeQueue.length > 0) safeSaveDB(JSON.parse(writeQueue.pop()));
-      });
-    }
-  });
+  writeQueue = writeQueue.then(() =>
+    fs.promises
+      .writeFile("users.json", data)
+      .catch((err) => console.error("❌ 書き込みエラー:", err))
+  );
+  return writeQueue;
 }
 // ==============================================
 
-// --- ルート ---
+// === ページルート ===
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
 app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "public/dashboard.html")));
 app.get("/pay.html", (req, res) => res.sendFile(path.join(__dirname, "public/pay.html")));
 
-// --- パスコード認証 ---
+// === パスコード認証 ===
 app.post("/auth", (req, res) => {
   if (req.body.code === ACCESS_CODE) res.redirect("/login.html");
   else res.send("<h2>パスコードが違います。<a href='/'>戻る</a></h2>");
 });
 
-// --- ログイン ---
+// === ログイン ===
 app.post("/login", (req, res) => {
   const nickname = req.body.nickname;
   const db = loadDB();
@@ -75,7 +58,7 @@ app.post("/login", (req, res) => {
   res.json({ success: true, nickname });
 });
 
-// --- 残高 ---
+// === 残高 ===
 app.get("/balance/:nickname", (req, res) => {
   const db = loadDB();
   const user = db[req.params.nickname];
@@ -83,22 +66,22 @@ app.get("/balance/:nickname", (req, res) => {
   res.json({ balance: user.balance });
 });
 
-// --- クエスト報酬 ---
-app.post("/quest", (req, res) => {
+// === クエスト報酬 ===
+app.post("/quest", async (req, res) => {
   const { nickname, amount } = req.body;
   const db = loadDB();
   if (!db[nickname]) return res.status(404).json({ error: "ユーザーが存在しません" });
 
   db[nickname].balance += amount;
   db[nickname].history.push({ type: "クエスト報酬", amount, date: new Date().toISOString() });
-  safeSaveDB(db);
+  await safeSaveDB(db);
 
   io.emit("update");
   res.json({ balance: db[nickname].balance });
 });
 
-// --- 送金 ---
-app.post("/send", (req, res) => {
+// === 送金 ===
+app.post("/send", async (req, res) => {
   const { from, to, amount } = req.body;
   const db = loadDB();
   if (!db[from] || !db[to]) return res.status(400).json({ error: "ユーザーが存在しません" });
@@ -110,12 +93,12 @@ app.post("/send", (req, res) => {
   db[from].history.push({ type: "送金", to, amount, date });
   db[to].history.push({ type: "受取", from, amount, date });
 
-  safeSaveDB(db);
+  await safeSaveDB(db);
   io.emit("update");
   res.json({ success: true, balance: db[from].balance });
 });
 
-// --- QRコード生成 ---
+// === QRコード生成 ===
 app.get("/generate-qr/:nickname/:amount", async (req, res) => {
   const { nickname, amount } = req.params;
   if (!nickname || !amount) return res.status(400).json({ error: "不足情報" });
@@ -129,7 +112,7 @@ app.get("/generate-qr/:nickname/:amount", async (req, res) => {
   }
 });
 
-// --- ランキング ---
+// === ランキング ===
 app.get("/ranking", (req, res) => {
   const db = loadDB();
   const ranking = Object.entries(db)
@@ -138,7 +121,7 @@ app.get("/ranking", (req, res) => {
   res.json(ranking);
 });
 
-// --- 履歴 ---
+// === 履歴 ===
 app.get("/history/:nickname", (req, res) => {
   const db = loadDB();
   const user = db[req.params.nickname];
@@ -146,10 +129,10 @@ app.get("/history/:nickname", (req, res) => {
   res.json(user.history);
 });
 
-// --- Socket.io 接続 ---
+// === Socket.io 接続 ===
 io.on("connection", (socket) => {
-  console.log("A user connected");
+  console.log("✅ A user connected");
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
