@@ -161,6 +161,25 @@ app.get("/api/logs", (req, res) => {
     res.json([]);
   }
 });
+// --- 起動時にテストユーザーを自動生成 ---
+function autoGenerateUsers(count = 100) {
+  const db = loadDB();
+  for (let i = 1; i <= count; i++) {
+    const name = `user${String(i).padStart(3, "0")}`;
+    if (!db[name]) {
+      db[name] = {
+        balance: Math.floor(Math.random() * 1000) + 500, // 500〜1500
+        history: [
+          { type: "初期付与", amount: db[name]?.balance ?? 0, date: new Date().toISOString() }
+        ]
+      };
+    }
+  }
+  saveDB(db);
+  console.log(`✅ ${count}ユーザーを自動生成しました`);
+}
+
+autoGenerateUsers(50); // ← ここで数を変えられる
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
