@@ -5,6 +5,7 @@ const QRCode = require("qrcode");
 const http = require("http");
 const socketio = require("socket.io");
 const { Sequelize, DataTypes } = require("sequelize");
+const BetterSqlite3 = require("better-sqlite3"); // ← これを明示的に読み込む！
 
 const app = express();
 const server = http.createServer(app);
@@ -12,10 +13,11 @@ const io = socketio(server);
 
 // --- Sequelize 初期化 ---
 const sequelize = new Sequelize({
-  dialect: "sqlite",
-  storage: "./database.sqlite",
-  logging: false
+  dialect: 'sqlite',
+  storage: './database.sqlite'
 });
+
+
 
 // --- モデル定義 ---
 const User = sequelize.define("User", {
@@ -36,17 +38,14 @@ const History = sequelize.define("History", {
   console.log("✅ SQLite synced successfully");
 })();
 
-// --- ミドルウェア ---
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static("public"));
 
-// --- ルート ---
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
 app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "public/dashboard.html")));
 app.get("/pay.html", (req, res) => res.sendFile(path.join(__dirname, "public/pay.html")));
 
-// --- ログイン ---
 app.post("/login", async (req, res) => {
   const nickname = req.body.nickname;
   let user = await User.findByPk(nickname);
@@ -56,14 +55,12 @@ app.post("/login", async (req, res) => {
   res.json({ success: true, nickname });
 });
 
-// --- 残高取得 ---
 app.get("/balance/:nickname", async (req, res) => {
   const user = await User.findByPk(req.params.nickname);
   if (!user) return res.status(404).json({ error: "ユーザーが存在しません" });
   res.json({ balance: user.balance });
 });
 
-// --- クエスト報酬 ---
 app.post("/quest", async (req, res) => {
   const { nickname, amount } = req.body;
   const user = await User.findByPk(nickname);
@@ -82,7 +79,6 @@ app.post("/quest", async (req, res) => {
   res.json({ balance: user.balance });
 });
 
-// --- 送金 ---
 app.post("/send", async (req, res) => {
   const { from, to, amount } = req.body;
   const sender = await User.findByPk(from);
@@ -104,7 +100,6 @@ app.post("/send", async (req, res) => {
   res.json({ success: true, balance: sender.balance });
 });
 
-// --- QRコード生成 ---
 app.get("/generate-qr/:nickname/:amount", async (req, res) => {
   const { nickname, amount } = req.params;
   const payload = JSON.stringify({ from: nickname, amount: Number(amount) });
@@ -112,7 +107,6 @@ app.get("/generate-qr/:nickname/:amount", async (req, res) => {
   res.json({ qr });
 });
 
-// --- ランキング ---
 app.get("/ranking", async (req, res) => {
   const ranking = await User.findAll({
     order: [["balance", "DESC"]],
@@ -121,7 +115,6 @@ app.get("/ranking", async (req, res) => {
   res.json(ranking);
 });
 
-// --- 履歴 ---
 app.get("/history/:nickname", async (req, res) => {
   const nickname = req.params.nickname;
   const history = await History.findAll({
@@ -133,9 +126,7 @@ app.get("/history/:nickname", async (req, res) => {
   res.json(history);
 });
 
-// --- Socket.io ---
 io.on("connection", () => console.log("✅ A user connected"));
 
-// --- サーバー起動 ---
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
