@@ -1,0 +1,13 @@
+[
+  {
+    "path": "/send",
+    "method": "POST",
+    "time": "2025-11-06T04:05:20.102Z",
+    "body": { "from": "Alice", "to": "Bob", "amount": 50 }
+  },
+  {
+    "path": "/balance/Alice",
+    "method": "GET",
+    "time": "2025-11-06T04:05:21.300Z"
+  }
+]

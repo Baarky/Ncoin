@@ -23,6 +23,27 @@ function saveDB(db) {
   fs.writeFileSync("users.json", JSON.stringify(db, null, 2));
 }
 
+// --- リクエストログ ---
+let requestBuffer = [];
+function logRequest(req) {
+  requestBuffer.push({
+    path: req.path,
+    method: req.method,
+    time: new Date().toISOString(),
+    body: Object.keys(req.body).length ? req.body : undefined,
+  });
+}
+setInterval(() => {
+  if (requestBuffer.length > 0) {
+    const logPath = "requests_log.json";
+    let existing = [];
+    try { existing = JSON.parse(fs.readFileSync(logPath, "utf8")); } catch {}
+    existing.push(...requestBuffer);
+    fs.writeFileSync(logPath, JSON.stringify(existing, null, 2));
+    requestBuffer = [];
+  }
+}, 2000);
+
 // --- ルート ---
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
 app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "public/dashboard.html")));
@@ -30,12 +51,14 @@ app.get("/pay.html", (req, res) => res.sendFile(path.join(__dirname, "public/pay
 
 // --- パスコード認証 ---
 app.post("/auth", (req, res) => {
+  logRequest(req);
   if (req.body.code === ACCESS_CODE) res.redirect("/login.html");
   else res.send("<h2>パスコードが違います。<a href='/'>戻る</a></h2>");
 });
 
 // --- ログイン ---
 app.post("/login", (req, res) => {
+  logRequest(req);
   const nickname = req.body.nickname;
   const db = loadDB();
   if (!db[nickname]) db[nickname] = { balance: 1000, history: [] };
@@ -45,6 +68,7 @@ app.post("/login", (req, res) => {
 
 // --- 残高 ---
 app.get("/balance/:nickname", (req, res) => {
+  logRequest(req);
   const db = loadDB();
   const user = db[req.params.nickname];
   if (!user) return res.status(404).json({ error: "ユーザーが存在しません" });
@@ -53,6 +77,7 @@ app.get("/balance/:nickname", (req, res) => {
 
 // --- クエスト報酬 ---
 app.post("/quest", (req, res) => {
+  logRequest(req);
   const { nickname, amount } = req.body;
   const db = loadDB();
   if (!db[nickname]) return res.status(404).json({ error: "ユーザーが存在しません" });
@@ -67,6 +92,7 @@ app.post("/quest", (req, res) => {
 
 // --- 送金 ---
 app.post("/send", (req, res) => {
+  logRequest(req);
   const { from, to, amount } = req.body;
   const db = loadDB();
   if (!db[from] || !db[to]) return res.status(400).json({ error: "ユーザーが存在しません" });
@@ -85,6 +111,7 @@ app.post("/send", (req, res) => {
 
 // --- QRコード生成 ---
 app.get("/generate-qr/:nickname/:amount", async (req, res) => {
+  logRequest(req);
   const { nickname, amount } = req.params;
   if (!nickname || !amount) return res.status(400).json({ error: "不足情報" });
 
@@ -99,6 +126,7 @@ app.get("/generate-qr/:nickname/:amount", async (req, res) => {
 
 // --- ランキング ---
 app.get("/ranking", (req, res) => {
+  logRequest(req);
   const db = loadDB();
   const ranking = Object.entries(db)
     .sort((a, b) => b[1].balance - a[1].balance)
@@ -108,6 +136,7 @@ app.get("/ranking", (req, res) => {
 
 // --- 履歴 ---
 app.get("/history/:nickname", (req, res) => {
+  logRequest(req);
   const db = loadDB();
   const user = db[req.params.nickname];
   if (!user) return res.status(404).json({ error: "ユーザーが存在しません" });
