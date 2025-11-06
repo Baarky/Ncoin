@@ -20,8 +20,12 @@ function loadDB() {
   catch { return {}; }
 }
 function saveDB(db) {
+  // 擬似I/O遅延（20ms）
+  const start = Date.now();
+  while (Date.now() - start < 20) {} 
   fs.writeFileSync("users.json", JSON.stringify(db, null, 2));
 }
+
 
 // --- リクエストログ ---
 let requestBuffer = [];
