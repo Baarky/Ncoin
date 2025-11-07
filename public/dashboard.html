@@ -34,7 +34,19 @@
   <h2>送金 / クエスト履歴</h2>
   <ul id="historyList"></ul>
 
+  <!-- QR送金ページへ -->
+  <button id="goPayBtn">QR送金ページへ</button>
 <script>
+    document.getElementById("goPayBtn").addEventListener("click", () => {
+    const nickname = localStorage.getItem("nickname");
+    if (!nickname) {
+      alert("ログイン情報がありません");
+      location.href = "/login.html";
+      return;
+    }
+    // nickname を URL パラメータとして渡す
+    location.href = `/pay.html?from=${encodeURIComponent(nickname)}`;
+  });
   const socket = io();
   let nickname = localStorage.getItem("nickname");
   if (!nickname) {
