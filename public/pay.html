@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QRコード送金</title>
+  <title>送金ページ</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     body {
@@ -24,12 +24,6 @@
 <body>
   <h2>QRコード送金</h2>
   <p>送金相手: <span id="recipient">（未選択）</span></p>
-
-  <div>
-    <button id="frontBtn">内カメラ</button>
-    <button id="backBtn">外カメラ</button>
-  </div>
-
   <div id="reader"></div>
 
   <div>
@@ -40,78 +34,53 @@
   <script>
     const html5QrCode = new Html5Qrcode("reader");
     let recipientNickname = null;
-    let cameras = [];
-    let currentCameraId = null;
 
-    async function initCameras() {
-      try {
-        cameras = await Html5Qrcode.getCameras();
-        if (cameras.length === 0) {
-          alert("カメラが見つかりません。");
-        }
-      } catch (err) {
-        alert("カメラの取得に失敗しました: " + err);
-      }
+    // --- 送金元情報取得 ---
+    const urlParams = new URLSearchParams(window.location.search);
+    let senderNickname = urlParams.get("from") || localStorage.getItem("nickname");
+    if (!senderNickname) {
+      alert("送金元情報が見つかりません。ログインしてください。");
+      location.href = "/login.html";
     }
 
-    async function startCamera(cameraId) {
-      if (currentCameraId) {
-        await html5QrCode.stop().catch(() => {});
-      }
-      currentCameraId = cameraId;
-      html5QrCode.start(
-        cameraId,
-        { fps: 10, qrbox: 250 },
-        (decodedText) => {
-          try {
-            const url = new URL(decodedText);
-            const fromParam = url.searchParams.get("from");
-            if (fromParam) {
-              recipientNickname = fromParam;
-              document.getElementById("recipient").textContent = recipientNickname;
-              document.getElementById("sendBtn").disabled = false;
-              html5QrCode.stop();
-            } else {
-              alert("QRコードに送信者情報が含まれていません。");
+    // --- 外カメラ優先でQRスキャン ---
+    Html5Qrcode.getCameras().then(cameras => {
+      if (cameras && cameras.length) {
+        // 外カメラがあれば優先、なければ最初のカメラ
+        const backCamera = cameras.find(cam => /back|rear|外/.test(cam.label.toLowerCase()));
+        const cameraId = backCamera ? backCamera.id : cameras[0].id;
+
+        html5QrCode.start(
+          cameraId,
+          { fps: 10, qrbox: 250 },
+          (decodedText) => {
+            try {
+              const url = new URL(decodedText);
+              const fromParam = url.searchParams.get("from");
+              if (fromParam) {
+                recipientNickname = fromParam;
+                document.getElementById("recipient").textContent = recipientNickname;
+                document.getElementById("sendBtn").disabled = false;
+                html5QrCode.stop();
+              } else {
+                alert("QRコードに送信者情報が含まれていません。");
+              }
+            } catch {
+              alert("無効なQRコードです。");
             }
-          } catch {
-            alert("無効なQRコードです。");
-          }
-        },
-        (errorMessage) => { /* スキャン失敗時は無視 */ }
-      );
-    }
-
-    document.getElementById("frontBtn").addEventListener("click", async () => {
-      const front = cameras.find(cam => cam.label.toLowerCase().includes("front")) || cameras[0];
-      if (front) startCamera(front.id);
-      else alert("内カメラが見つかりません。");
+          },
+          (errorMessage) => { /* スキャン失敗時は無視 */ }
+        );
+      } else {
+        alert("カメラが見つかりません。");
+      }
+    }).catch(err => {
+      alert("カメラのアクセスに失敗しました: " + err);
     });
 
-    document.getElementById("backBtn").addEventListener("click", async () => {
-      const back = cameras.find(cam =>
-        cam.label.toLowerCase().includes("back") ||
-        cam.label.toLowerCase().includes("rear") ||
-        cam.label.toLowerCase().includes("environment")
-      ) || cameras[cameras.length - 1];
-      if (back) startCamera(back.id);
-      else alert("外カメラが見つかりません。");
-    });
-
-    // 初期化
-    initCameras();
-
-    // ✅ 送金処理
+    // --- 送金ボタン ---
     document.getElementById("sendBtn").addEventListener("click", async () => {
       const amount = parseInt(document.getElementById("amount").value);
-      const urlParams = new URLSearchParams(window.location.search);
-      const senderNickname = urlParams.get("from");
-
-      if (!senderNickname) {
-        alert("送金元情報が見つかりません。ダッシュボードからアクセスしてください。");
-        return;
-      }
-
       if (!recipientNickname || !amount) {
         alert("送金先と金額を確認してください。");
         return;
@@ -124,8 +93,10 @@
       });
 
       const data = await res.json();
-      alert(data.message);
-      if (res.ok) location.href = "/dashboard.html?nickname=" + encodeURIComponent(senderNickname);
+      if (data.error) alert(data.error);
+      else alert(`送金成功: 残高 ${data.balance} コイン`);
+
+      if (res.ok) location.href = "/dashboard.html";
     });
   </script>
 </body>
