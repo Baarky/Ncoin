@@ -23,7 +23,6 @@ useEffect(() => {
       if (result.success) {
         setUser(result.user);
       } else {
-        // トークンが無効な場合、削除してログアウト
         localStorage.removeItem("token");
         setUser(null);
       }
@@ -39,6 +38,11 @@ useEffect(() => {
   initializeAuth();
 }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setUser(null);
+  };
+
   if (loading) {
     return <div>読み込み中...</div>;
   }
@@ -49,7 +53,7 @@ useEffect(() => {
   }
 
   // ログイン済み → HomePage
-  return <HomePage />;
+  return <HomePage onLogout={handleLogout} />;
 }
 
 export default App;

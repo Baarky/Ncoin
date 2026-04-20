@@ -9,7 +9,7 @@ import jwt from "jsonwebtoken";
 // 残高取得
 export const getBalance = async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;  // ← userId → id
 
     const result = await pool.query(
       `SELECT coin FROM users WHERE id = $1`,
@@ -32,10 +32,9 @@ export const getBalance = async (req, res) => {
 // 送金
 export const send = async (req, res) => {
   try {
-    const fromUserId = req.user.userId;
+    const fromUserId = req.user.id;  // ← userId → id
     const { toUsername, amount } = req.body;
 
-    // 入力チェック（順番重要）
     if (!toUsername || !validateAmount(amount)) {
       return res.status(400).json({ error: "Invalid input" });
     }
@@ -75,7 +74,7 @@ export const send = async (req, res) => {
 // 履歴取得
 export const getHistory = async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;  // ← userId → id
 
     const result = await pool.query(
       `SELECT 
@@ -98,16 +97,16 @@ export const getHistory = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
 const SECRET = process.env.QR_SECRET || "secret";
 
 export const sendByQR = async (req, res) => {
   try {
     const { token } = req.body;
 
-    // 検証
     const decoded = jwt.verify(token, SECRET);
 
-    const fromUserId = req.user.userId;
+    const fromUserId = req.user.id;  // ← userId → id
 
     const result = await sendCoin(
       fromUserId,
