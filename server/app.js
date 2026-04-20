@@ -12,6 +12,7 @@ import questRoutes from "./routes/quest.routes.js";
 import rankingRoutes from "./routes/ranking.routes.js";
 import qrRoutes from "./routes/qr.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import userRoutes from "./routes/users.routes.js";
 
 const app = express();
 
@@ -31,6 +32,8 @@ app.use("/api/ranking", rankingRoutes);
 app.use("/api/qr", qrRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/users", userRoutes);  // ← 追加
+
 // ヘルスチェック
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });

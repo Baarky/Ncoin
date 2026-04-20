@@ -2,9 +2,7 @@ const API_URL = "http://localhost:3000/api";
 
 export const getBalance = async (token) => {
   try {
-    // /users/balance → 別のエンドポイントに変更
-    // サーバーにあるルートに合わせる
-    const res = await fetch(`${API_URL}/auth/balance`, {  // または別のエンドポイント
+    const res = await fetch(`${API_URL}/transaction/balance`, {
       headers: {
         Authorization: `Bearer ${token}`
       }

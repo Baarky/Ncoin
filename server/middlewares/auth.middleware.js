@@ -1,6 +1,5 @@
 import { verifyToken } from "../utils/token.js";
 
-
 export const authMiddleware = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -10,20 +9,20 @@ export const authMiddleware = (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-
     const decoded = verifyToken(token);
 
     if (!decoded) {
       return res.status(401).json({ error: "Invalid token" });
     }
     
-    if (user.is_banned) {
+    // ✅ decoded を使う（user ではない）
+    if (decoded.is_banned) {
       return res.status(403).json({
         error: "User is banned"
       });
     }
+    
     req.user = decoded;
-
     next();
 
   } catch (err) {
