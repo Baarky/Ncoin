@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:3000/api";
+const API_URL = "/api";  // ← ここだけ修正
 
 export const getRanking = async () => {
   try {

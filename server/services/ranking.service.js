@@ -6,6 +6,7 @@ export const getRanking = async () => {
        username,
        exp,
        level,
+       coin,
        RANK() OVER (ORDER BY exp DESC) as rank
      FROM users
      ORDER BY exp DESC

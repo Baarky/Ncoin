@@ -35,8 +35,8 @@ export const loginUser = async (username, password) => {
     throw new Error("User is banned");
   }
 
-  // パスワードチェック（省略）
-
+  const isValid = await comparePassword(password, user.password);
+  if (!isValid) throw new Error("Invalid credentials");
   const token = generateToken(user);
 
   return {
