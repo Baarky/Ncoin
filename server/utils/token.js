@@ -10,7 +10,7 @@ export const generateToken = (user) => {
       username: user.username,
       role: user.role
     },
-    process.env.JWT_SECRET,
+    AUTH_CONFIG.JWT_SECRET,  // ← ここだけ修正（元はprocess.env.JWT_SECRETで不一致）
     {
       expiresIn: "1h"
     }

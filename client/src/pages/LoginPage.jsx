@@ -29,7 +29,7 @@ export default function LoginPage({ onLogin }) {
 
         if (data.token) {
           localStorage.setItem("token", data.token);
-          onLogin();
+          onLogin(data.user); // ← ここだけ修正
         } else {
           alert(data.error || "ログイン失敗");
         }

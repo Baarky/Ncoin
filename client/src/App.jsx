@@ -43,14 +43,12 @@ useEffect(() => {
     return <div>読み込み中...</div>;
   }
 
+  // 未ログイン → LoginPage
   if (!user) {
-    return <HomePage onGoLogin={() => setUser("login")} />;
+    return <LoginPage onLogin={(userData) => setUser(userData)} />;
   }
 
-  if (user === "login") {
-    return <LoginPage onLogin={() => setUser({})} />;
-  }
-
+  // ログイン済み → HomePage
   return <HomePage />;
 }
 
