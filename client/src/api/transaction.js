@@ -1,14 +1,21 @@
 const API_URL = "http://localhost:3000/api";
 
-export const sendCoin = async (token, toUsername, amount) => {
-  const res = await fetch(`${API_URL}/transactions/send`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({ toUsername, amount })
-  });
+export async function sendCoin(amount, recipient) {
+    try {
+        const response = await fetch(`/api/sendCoin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount, recipient })
+        });
 
-  return res.json();
-};
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Error: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error in sendCoin:', error);
+        return { success: false, message: error.message }; // Return error object
+    }
+}

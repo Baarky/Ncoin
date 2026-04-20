@@ -91,8 +91,8 @@ export default function HomePage() {
 
       <h2>ランキング</h2>
       <ul>
-        {ranking.map((user) => (
-          <li key={user.id}>
+        {ranking.map((user, index) => (
+          <li key={user.id || index}>
             {user.username} - {user.exp}
           </li>
         ))}
