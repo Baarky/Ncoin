@@ -1,5 +1,5 @@
 import { useState } from "react";
-import {  register } from "../api/auth";
+import { register, login } from "../api/auth";
 export default function LoginPage({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState("");
