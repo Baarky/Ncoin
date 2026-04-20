@@ -1,11 +1,21 @@
 const API_URL = "http://localhost:3000/api";
 
 export const getBalance = async (token) => {
-  const res = await fetch(`${API_URL}/users/balance`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
+  try {
+    const res = await fetch(`${API_URL}/users/balance`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
 
-  return res.json();
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Error: ${res.status}`);
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error("getBalance error:", err);
+    return { error: err.message };
+  }
 };

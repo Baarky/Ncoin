@@ -8,18 +8,25 @@ export default function HomePage() {
   const [toUsername, setToUsername] = useState("");
   const [amount, setAmount] = useState("");
   const [ranking, setRanking] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // 残高取得
   const fetchBalance = async () => {
     try {
       const token = localStorage.getItem("token");
       const data = await getBalance(token);
-
+      
+      if (data.error) {
+        setError(data.error);
+        return;
+      }
+      
       if (data && data.coin !== undefined) {
         setCoin(data.coin);
+        setError(null);
       }
     } catch (err) {
-      console.error(err);
+      setError("残高取得に失敗しました");
     }
   };
 
@@ -62,6 +69,8 @@ export default function HomePage() {
   return (
     <div style={{ padding: 20 }}>
       <h1>ホーム</h1>
+          {error && <div style={{ color: "red", marginBottom: 20 }}>{error}</div>}
+
       <p>残高: {coin} coin</p>
 
       <h2>送金</h2>
