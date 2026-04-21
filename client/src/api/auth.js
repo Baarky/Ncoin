@@ -68,7 +68,23 @@ export const verifyToken = async (token) => {
     return { success: false, error: err.message };
   }
 };
+export const deleteQuest = async (token, questId) => {
+  const res = await fetch(`${API_URL}/admin/delete-quest`, {
+    method: "POST",
+    headers: authHeader(token),
+    body: JSON.stringify({ questId })
+  });
+  return res.json();
+};
 
+export const createOfficialQuest = async (token, title, description, rewardCoin, rewardExp) => {
+  const res = await fetch(`${API_URL}/admin/official-quest`, {
+    method: "POST",
+    headers: authHeader(token),
+    body: JSON.stringify({ title, description, rewardCoin, rewardExp })
+  });
+  return res.json();
+};
 export const logout = () => {
   localStorage.removeItem("token");
 };

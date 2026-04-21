@@ -1,15 +1,13 @@
 import { pool } from "../config/db.js";
 
-
 export const adminMiddleware = async (req, res, next) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;  // ← userId → id
 
-    const query = `
-      SELECT is_admin FROM users WHERE id = $1
-    `;
-
-    const result = await pool.query(query, [userId]);
+    const result = await pool.query(
+      `SELECT is_admin FROM users WHERE id = $1`,
+      [userId]
+    );
     const user = result.rows[0];
 
     if (!user || !user.is_admin) {

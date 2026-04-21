@@ -8,9 +8,10 @@ export const generateToken = (user) => {
     {
       id: user.id,
       username: user.username,
-      role: user.role
+      role: user.role,
+      is_admin: user.is_admin  // ← 追加
     },
-    AUTH_CONFIG.JWT_SECRET,  // ← ここだけ修正（元はprocess.env.JWT_SECRETで不一致）
+    AUTH_CONFIG.JWT_SECRET,
     {
       expiresIn: "1h"
     }

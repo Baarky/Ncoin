@@ -1,5 +1,4 @@
 import { pool } from "../config/db.js";
-// 報告テーブルの作成
 
 export const createReportTable = async () => {
   const query = `
@@ -7,7 +6,8 @@ export const createReportTable = async () => {
       id SERIAL PRIMARY KEY, 
       reporter_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       target_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL, 
-      reason TEXT NOT NULL, 
+      reason TEXT NOT NULL,
+      status VARCHAR(20) DEFAULT 'pending',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
     );
   `;

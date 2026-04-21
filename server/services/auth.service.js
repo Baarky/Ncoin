@@ -39,12 +39,13 @@ export const loginUser = async (username, password) => {
   if (!isValid) throw new Error("Invalid credentials");
   const token = generateToken(user);
 
-  return {
-    token,
-    user: {
-      id: user.id,
-      username: user.username,
-      role: user.role
-    }
-  };
+return {
+  token,
+  user: {
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    is_admin: user.is_admin  // ← 追加
+  }
+};
 };

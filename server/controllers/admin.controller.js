@@ -1,6 +1,6 @@
 import {
   getReports, banUser, unbanUser, updateReportStatus,
-  getAllUsers, giveCoins, approveQuest, getPendingQuests
+  getAllUsers, giveCoins, approveQuest, getPendingQuests, deleteQuest, createOfficialQuest
 } from "../services/admin.service.js";
 
 export const reports = async (req, res) => {
@@ -82,6 +82,32 @@ export const pendingQuests = async (req, res) => {
     const data = await getPendingQuests();
     res.json(data);
   } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+export const removeQuest = async (req, res) => {
+  try {
+    const { questId } = req.body;
+    if (!questId) return res.status(400).json({ error: "questId required" });
+    await deleteQuest(questId);
+    res.json({ message: "Quest deleted" });
+  } catch (err) {
+    console.error(err);
+    if (err.message === "Quest not found") return res.status(404).json({ error: err.message });
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+export const officialQuest = async (req, res) => {
+  try {
+    const { title, description, rewardCoin, rewardExp } = req.body;
+    if (!title || rewardCoin < 0 || rewardExp < 0) {
+      return res.status(400).json({ error: "Invalid input" });
+    }
+    const quest = await createOfficialQuest(title, description, rewardCoin, rewardExp);
+    res.json(quest);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 };
