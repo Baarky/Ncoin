@@ -10,6 +10,7 @@ import { createQuestProgressTable } from "./models/questProgress.model.js";
 import { startRankingJob } from "./jobs/rankingUpdate.job.js";
 import { startSeasonResetJob } from "./jobs/seasonReset.job.js";
 
+
 const startServer = async () => {
   try {
     await connectDB();
