@@ -4,7 +4,8 @@ import { verifyToken } from "./api/auth";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import QuestPage from "./pages/QuestPage";
-
+import AdminLoginPage from "./pages/AdminLoginPage";
+import AdminPage from "./pages/AdminPage";
 // ↑ QuestPageのimportを削除
 
 function App() {
@@ -59,6 +60,30 @@ function App() {
             : <Navigate to="/login" />
         }
       />
+      <Route
+        path="/quest"
+        element={
+          user
+            ? <QuestPage />
+            : <Navigate to="/login" />
+        }
+      />
+      <Route
+  path="/admin-login"
+  element={
+    user?.is_admin
+      ? <Navigate to="/admin" />
+      : <AdminLoginPage onLogin={(userData) => setUser(userData)} />
+  }
+/>
+<Route
+  path="/admin"
+  element={
+    user?.is_admin
+      ? <AdminPage />
+      : <Navigate to="/admin-login" />
+  }
+/>
     </Routes>
   );
 }

@@ -5,13 +5,28 @@ export const getQuests = async (token) => {
     const res = await fetch(`${API_URL}/quests`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || `Error: ${res.status}`);
-    }
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `Error: ${res.status}`);
     return await res.json();
   } catch (err) {
     console.error("getQuests error:", err);
+    return { error: err.message };
+  }
+};
+
+export const createQuest = async (token, title, description, rewardCoin, rewardExp) => {
+  try {
+    const res = await fetch(`${API_URL}/quests`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ title, description, rewardCoin, rewardExp })
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `Error: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error("createQuest error:", err);
     return { error: err.message };
   }
 };
@@ -26,10 +41,7 @@ export const completeQuest = async (token, questId) => {
       },
       body: JSON.stringify({ questId })
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || `Error: ${res.status}`);
-    }
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `Error: ${res.status}`);
     return await res.json();
   } catch (err) {
     console.error("completeQuest error:", err);
@@ -42,13 +54,23 @@ export const getMyQuests = async (token) => {
     const res = await fetch(`${API_URL}/quests/my`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || `Error: ${res.status}`);
-    }
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `Error: ${res.status}`);
     return await res.json();
   } catch (err) {
     console.error("getMyQuests error:", err);
+    return { error: err.message };
+  }
+};
+
+export const getMyCreatedQuests = async (token) => {
+  try {
+    const res = await fetch(`${API_URL}/quests/my-created`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `Error: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error("getMyCreatedQuests error:", err);
     return { error: err.message };
   }
 };

@@ -1,18 +1,19 @@
 import express from "express";
-import { reports, ban } from "../controllers/admin.controller.js";
+import { reports, ban, unban, updateReport, users, distribute, approve, pendingQuests } from "../controllers/admin.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { adminMiddleware } from "../middlewares/admin.middleware.js";
-import { updateReport } from "../controllers/admin.controller.js";
 
 const router = express.Router();
 
-// 管理者専用
-router.get("/reports", authMiddleware, adminMiddleware, reports);
-router.post("/ban", authMiddleware, adminMiddleware, ban);
-router.patch(
-  "/reports",
-  authMiddleware,
-  adminMiddleware,
-  updateReport
-);
+const auth = [authMiddleware, adminMiddleware];
+
+router.get("/reports", ...auth, reports);
+router.post("/ban", ...auth, ban);
+router.post("/unban", ...auth, unban);
+router.patch("/reports", ...auth, updateReport);
+router.get("/users", ...auth, users);
+router.post("/distribute", ...auth, distribute);
+router.post("/approve-quest", ...auth, approve);
+router.get("/pending-quests", ...auth, pendingQuests);
+
 export default router;
