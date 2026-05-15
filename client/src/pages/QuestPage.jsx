@@ -100,29 +100,45 @@ export default function QuestPage() {
       </div>
 
       {/* クエスト一覧 */}
-      {tab === "all" && (
-        <div>
-          {quests.length === 0 && <p>承認済みのクエストがありません</p>}
-          {quests.map((quest) => (
-            <div key={quest.id} style={{
-              border: "1px solid #ccc", borderRadius: 8, padding: 16, marginBottom: 12,
-              opacity: quest.is_completed ? 0.5 : 1
-            }}>
-              <h3 style={{ margin: "0 0 4px" }}>{quest.title}</h3>
-              <p style={{ margin: "0 0 8px", color: "#555" }}>{quest.description}</p>
-              <p style={{ margin: "0 0 8px" }}>報酬: {quest.reward_coin} coin / 25 exp</p>
-              <p style={{ margin: "0 0 8px", fontSize: 12, color: "#888" }}>作成者: {quest.created_by_username}</p>
-              {quest.is_completed ? (
-                quest.creator_approved
-                  ? <span style={{ color: "green" }}>✅ 完了</span>
-                  : <span style={{ color: "orange" }}>⏳ 依頼者の承認待ち</span>
-              ) : (
-                <button onClick={() => handleComplete(quest.id)}>達成申請する</button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+{tab === "all" && (
+  <div>
+    {quests.length === 0 && <p>承認済みのクエストがありません</p>}
+    {quests.map((quest) => (
+      <div key={quest.id} style={{
+        border: "1px solid #ccc", borderRadius: 8, padding: 16, marginBottom: 12,
+        backgroundColor: quest.is_completed ? "#f0f0f0" : "white",  // ← 灰色背景
+        opacity: quest.is_completed ? 0. : 1  // ← 少し薄く
+      }}>
+        <h3 style={{ margin: "0 0 4px", color: quest.is_completed ? "#888" : "inherit" }}>  {/* ← 文字も灰色 */}
+          {quest.is_official && (
+            <span style={{
+              backgroundColor: "#FFD700", color: "#333",
+              fontSize: 11, padding: "2px 6px", borderRadius: 4,
+              marginRight: 6, fontWeight: "bold"
+            }}>★ 公式</span>
+          )}
+          {quest.title}
+        </h3>
+        <p style={{ margin: "0 0 8px", color: "#888" }}>{quest.description}</p>
+        <p style={{ margin: "0 0 8px", color: quest.is_completed ? "#888" : "inherit" }}>
+          報酬: {quest.reward_coin} coin / {quest.reward_exp_custom ?? 25} exp
+        </p>
+        <p style={{ margin: "0 0 8px", fontSize: 12, color: "#aaa" }}>
+          作成者: {quest.created_by_username ?? "公式"}
+        </p>
+{quest.is_completed && (
+  <span style={{ color: "#888" }}>✅ 達成済み</span>
+)}
+{!quest.is_completed && !quest.my_completed && (
+  <button onClick={() => handleComplete(quest.id)}>達成申請する</button>
+)}
+{!quest.is_completed && quest.my_completed && (
+  <span style={{ color: "orange" }}>⏳ 承認待ち</span>
+)}
+      </div>
+    ))}
+  </div>
+)}
 
       {/* 達成済み */}
       {tab === "mine" && (

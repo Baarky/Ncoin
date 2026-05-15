@@ -48,14 +48,18 @@ export const getQuests = async (userId) => {
        q.reward_exp_custom, q.is_official,
        q.created_at, q.created_by,
        u.username AS created_by_username,
-       CASE WHEN qp.id IS NOT NULL THEN true ELSE false END AS is_completed,
-       qp.completer_approved,
-       qp.creator_approved
+       CASE WHEN my.id IS NOT NULL THEN true ELSE false END AS my_completed,
+       CASE WHEN anyone.id IS NOT NULL THEN true ELSE false END AS is_completed,
+       my.completer_approved,
+       my.creator_approved
      FROM quests q
      LEFT JOIN users u ON q.created_by = u.id
-     LEFT JOIN quest_progress qp ON q.id = qp.quest_id AND qp.user_id = $1
+     LEFT JOIN quest_progress my ON q.id = my.quest_id AND my.user_id = $1
+     LEFT JOIN quest_progress anyone ON q.id = anyone.quest_id AND anyone.creator_approved = true
      WHERE q.is_approved = true
-     ORDER BY q.is_official DESC, q.created_at DESC`,
+     ORDER BY q.is_official DESC,
+              (CASE WHEN anyone.id IS NOT NULL THEN 1 ELSE 0 END) ASC,
+              q.created_at DESC`,
     [userId]
   );
   return result.rows;

@@ -29,9 +29,9 @@ export const list = async (req, res) => {
     const quests = await getQuests(userId);
     res.json(quests);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  }
+  console.error("list error:", err.message);  // ← 追加
+  res.status(500).json({ error: err.message });  // ← err.messageに変更
+}
 };
 
 export const complete = async (req, res) => {
@@ -59,9 +59,9 @@ export const myQuests = async (req, res) => {
     const quests = await getMyQuests(userId);
     res.json(quests);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  }
+  console.error("list error:", err.message);  // ← 追加
+  res.status(500).json({ error: err.message });  // ← err.messageに変更
+}
 };
 
 // 依頼者が達成を承認
@@ -90,9 +90,9 @@ export const pendingApprovals = async (req, res) => {
     const data = await getPendingApprovals(creatorId);
     res.json(data);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  }
+  console.error("list error:", err.message);  // ← 追加
+  res.status(500).json({ error: err.message });  // ← err.messageに変更
+}
 };
 
 export const updateReport = async (req, res) => {
@@ -103,6 +103,7 @@ export const updateReport = async (req, res) => {
     const result = await updateReportStatus(reportId, status);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
-  }
+  console.error("list error:", err.message);  // ← 追加
+  res.status(500).json({ error: err.message });  // ← err.messageに変更
+}
 };

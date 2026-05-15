@@ -6,6 +6,7 @@ import LoginPage from "./pages/LoginPage";
 import QuestPage from "./pages/QuestPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminPage from "./pages/AdminPage";
+
 // ↑ QuestPageのimportを削除
 
 function App() {
@@ -56,7 +57,7 @@ function App() {
         path="/"
         element={
           user
-            ? <HomePage onLogout={handleLogout} />
+            ? <HomePage onLogout={handleLogout} user={user} />
             : <Navigate to="/login" />
         }
       />

@@ -1,41 +1,30 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { getBalance } from "../api/user";
 import { sendCoin } from "../api/transaction";
 import { getRanking } from "../api/ranking";
 
-export default function HomePage({ onLogout }) {
+export default function HomePage({ onLogout, user }) {
   const [coin, setCoin] = useState(0);
   const [toUsername, setToUsername] = useState("");
   const [amount, setAmount] = useState("");
   const [ranking, setRanking] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   const fetchBalance = async () => {
     try {
       const token = localStorage.getItem("token");
       const data = await getBalance(token);
-      
-      if (data.error) {
-        setError(data.error);
-        return;
-      }
-      
-      if (data && data.coin !== undefined) {
-        setCoin(data.coin);
-        setError(null);
-      }
+      if (data.error) { setError(data.error); return; }
+      if (data && data.coin !== undefined) { setCoin(data.coin); setError(null); }
     } catch (err) {
       setError("残高取得に失敗しました");
     }
   };
 
-  // 初回ロード
-  useEffect(() => {
-    fetchBalance();
-  }, []);
+  useEffect(() => { fetchBalance(); }, []);
 
-  // ランキング取得
   useEffect(() => {
     const fetchRanking = async () => {
       try {
@@ -45,15 +34,12 @@ export default function HomePage({ onLogout }) {
         console.error(err);
       }
     };
-
     fetchRanking();
   }, []);
 
-  // 送金
   const handleSend = async () => {
     const token = localStorage.getItem("token");
     const result = await sendCoin(token, toUsername, Number(amount));
-
     if (result.error) {
       alert(result.error);
     } else {
@@ -68,7 +54,13 @@ export default function HomePage({ onLogout }) {
     <div style={{ padding: 20 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1>ホーム</h1>
-        <button onClick={onLogout}>ログアウト</button>  {/* ← 追加 */}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => navigate("/quest")}>クエスト</button>
+          {user?.is_admin && (
+            <button onClick={() => navigate("/admin")}>管理者ページ</button>
+          )}
+          <button onClick={onLogout}>ログアウト</button>
+        </div>
       </div>
 
       {error && <div style={{ color: "red", marginBottom: 20 }}>{error}</div>}
@@ -76,19 +68,16 @@ export default function HomePage({ onLogout }) {
       <p>残高: {coin} coin</p>
 
       <h2>送金</h2>
-
       <input
         placeholder="送信先ユーザー名"
         value={toUsername}
         onChange={(e) => setToUsername(e.target.value)}
       />
-
       <input
         placeholder="金額"
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
       />
-
       <button onClick={handleSend}>送金</button>
 
       <h2>EXP所持ランキング</h2>
@@ -98,8 +87,8 @@ export default function HomePage({ onLogout }) {
             {user.username} - {user.exp} lv {user.level}
           </li>
         ))}
-
       </ul>
+
       <h2>コイン所持ランキング</h2>
       <ul>
         {ranking.map((user, index) => (
