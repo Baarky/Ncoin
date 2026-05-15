@@ -6,6 +6,7 @@ import LoginPage from "./pages/LoginPage";
 import QuestPage from "./pages/QuestPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminPage from "./pages/AdminPage";
+import ProfilePage from "./pages/ProfilePage";
 
 // ↑ QuestPageのimportを削除
 
@@ -84,6 +85,10 @@ function App() {
       ? <AdminPage />
       : <Navigate to="/admin-login" />
   }
+/>
+<Route
+  path="/profile/:username"
+  element={user ? <ProfilePage /> : <Navigate to="/login" />}
 />
     </Routes>
   );

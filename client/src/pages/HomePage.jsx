@@ -59,6 +59,7 @@ export default function HomePage({ onLogout, user }) {
           {user?.is_admin && (
             <button onClick={() => navigate("/admin")}>管理者ページ</button>
           )}
+          <button onClick={() => navigate(`/profile/${user?.username}`)}>マイプロフィール</button>
           <button onClick={onLogout}>ログアウト</button>
         </div>
       </div>
@@ -80,23 +81,25 @@ export default function HomePage({ onLogout, user }) {
       />
       <button onClick={handleSend}>送金</button>
 
-      <h2>EXP所持ランキング</h2>
-      <ul>
-        {ranking.map((user, index) => (
-          <li key={user.id || index}>
-            {user.username} - {user.exp} lv {user.level}
-          </li>
-        ))}
-      </ul>
+<h2>EXP所持ランキング</h2>
+<ul>
+  {ranking.map((u, index) => (
+    <li key={u.id || index} style={{ cursor: "pointer" }}
+      onClick={() => navigate(`/profile/${u.username}`)}>
+      {u.username} - {u.exp} lv {u.level}
+    </li>
+  ))}
+</ul>
 
-      <h2>コイン所持ランキング</h2>
-      <ul>
-        {ranking.map((user, index) => (
-          <li key={user.id || index}>
-            {user.username} - {user.coin} coin
-          </li>
-        ))}
-      </ul>
+<h2>コイン所持ランキング</h2>
+<ul>
+  {ranking.map((u, index) => (
+    <li key={u.id || index} style={{ cursor: "pointer" }}
+      onClick={() => navigate(`/profile/${u.username}`)}>
+      {u.username} - {u.coin} coin
+    </li>
+  ))}
+</ul>
     </div>
   );
 }
