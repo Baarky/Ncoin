@@ -12,7 +12,7 @@ import questRoutes from "./routes/quest.routes.js";
 import rankingRoutes from "./routes/ranking.routes.js";
 import qrRoutes from "./routes/qr.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
-import userRoutes from "./routes/users.routes.js";
+import userRoutes from "./routes/user.routes.js";
 
 const app = express();
 
