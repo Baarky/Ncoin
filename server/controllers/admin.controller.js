@@ -51,7 +51,8 @@ export const users = async (req, res) => {
     const data = await getAllUsers();
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    console.error("getAllUsers error:", err);  // ← 詳細ログ追加
+    res.status(500).json({ error: err.message });  // ← エラー内容をレスポンスにも
   }
 };
 

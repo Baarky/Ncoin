@@ -45,16 +45,17 @@ export const getQuests = async (userId) => {
   const result = await pool.query(
     `SELECT 
        q.id, q.title, q.description, q.reward_coin, q.reward_exp,
+       q.reward_exp_custom, q.is_official,
        q.created_at, q.created_by,
        u.username AS created_by_username,
        CASE WHEN qp.id IS NOT NULL THEN true ELSE false END AS is_completed,
        qp.completer_approved,
        qp.creator_approved
      FROM quests q
-     JOIN users u ON q.created_by = u.id
+     LEFT JOIN users u ON q.created_by = u.id
      LEFT JOIN quest_progress qp ON q.id = qp.quest_id AND qp.user_id = $1
      WHERE q.is_approved = true
-     ORDER BY q.created_at DESC`,
+     ORDER BY q.is_official DESC, q.created_at DESC`,
     [userId]
   );
   return result.rows;
